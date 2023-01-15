@@ -1,5 +1,5 @@
 from enum import Enum, auto
-import Fit2d
+import Fit
 import Main
 import CommandClass
 
@@ -18,15 +18,15 @@ def readGetData(res):
 	return Status.NULL
 
 def readFit2d(res):
-	if res == Fit2d.ReturnInfo.Status.SUCCESS:
+	if res == Fit.ReturnInfo.Status.SUCCESS:
 		return Status.SUCCESS
-	elif res == Fit2d.ReturnInfo.Status.ERROR:
+	elif res == Fit.ReturnInfo.Status.ERROR:
 		return Status.ERROR
-	elif res == Fit2d.ReturnInfo.Status.BACK:
+	elif res == Fit.ReturnInfo.Status.BACK:
 		return Status.BACK
-	elif res == Fit2d.ReturnInfo.Status.NEXT:
+	elif res == Fit.ReturnInfo.Status.NEXT:
 		return Status.BACK
-	elif res == Fit2d.ReturnInfo.Status.QUIT:
+	elif res == Fit.ReturnInfo.Status.QUIT:
 		return Status.QUIT
 	return Status.NULL
 

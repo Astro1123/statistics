@@ -1,11 +1,9 @@
 import PySimpleGUI as sg
 from enum import Enum, auto
-from Fit2d.FitData import FitData
+from Fit.FitData import FitData
 import ResClass
 import os
 import platform
-
-
 from getData_Human.getData import getData
 
 
@@ -15,11 +13,15 @@ class Status(Enum):
 	ERROR = auto()
 	GET_DATA = auto()
 	FIT_2D = auto()
+	FIT_3D = auto()
+	FIT_mD = auto()
 
 def main(default):
 	dic = {
 		Status.GET_DATA: 'make DataFile',
-		Status.FIT_2D: 'do Curve Fitting and show 2D Graph'
+		Status.FIT_2D: 'do Curve Fitting and show 2D Graph',
+		Status.FIT_3D: 'do Curve Fitting and show 3D Graph',
+		Status.FIT_mD: 'do Curve Fitting (multi-dimension)'
 	}
 	
 	res = select(default, dic)
@@ -27,7 +29,11 @@ def main(default):
 	if res == Status.GET_DATA:
 		return (ResClass.readGetData(getData()), dic[res])
 	elif res == Status.FIT_2D:
-		return (ResClass.readFit2d(FitData()), dic[res])
+		return (ResClass.readFit2d(FitData(2)), dic[res])
+	elif res == Status.FIT_3D:
+		return (ResClass.readFit2d(FitData(3)), dic[res])
+	elif res == Status.FIT_mD:
+		return (ResClass.readFit2d(FitData(0)), dic[res])
 	else:
 		return (ResClass.readMain(res), 'Select')
 
