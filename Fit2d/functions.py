@@ -1,4 +1,7 @@
 import numpy as np
+import sympy as sym
+from scipy import stats
+from sympy.plotting import plot
 import pandas as pd
 import PySimpleGUI as sg
 import matplotlib.pyplot as plt
@@ -8,11 +11,72 @@ import japanize_matplotlib
 
 from . import ReturnInfo as ri
 
+def meaningCov(rho):
+	if (rho >= 0.7):
+		return "Very strong positive relationship"
+	elif (rho >= 0.4):
+		return "Strong positive relationship"
+	elif (rho >= 0.3):
+		return "Moderate positive relationship"
+	elif (rho >= 0.2):
+		return "Weak positive relationship"
+	elif (rho > 0):
+		return "No or negligible relationship"
+	elif (rho <= 0.7):
+		return "Very strong negative relationship"
+	elif (rho <= 0.4):
+		return "Strong negative relationship"
+	elif (rho <= 0.3):
+		return "Moderate negative relationship"
+	elif (rho <= 0.2):
+		return "Weak negative relationship"
+	elif (rho < 0):
+		return "No or negligible relationship"
+	return "No relationship [zero correlation]"
+
 def ScatterGraph(df, xName, yName):
 	sg.theme('Dark Brown')
 	
+	xdata = df[xName].values
+	ydata = df[yName].values
+	
+	#Correlation coefficients
+	data = np.array([xdata, ydata])
+	data = data[:, ~np.isnan(data).any(axis=0)]
+	xdata = data[0]
+	ydata = data[1]
+	corrcoef = np.corrcoef(data)
+	rho = corrcoef[0][1]
+	meaning = meaningCov(rho)
+	
+	#Fitting function (linear)
+	x_latent = np.linspace(min(xdata), max(xdata), 100)
+	sym.init_printing(use_unicode=True)
+	x, y = sym.symbols("x y")
+	coefficients = np.polyfit(xdata, ydata, 1)
+	expr = 0
+	for index, coefficient in enumerate(coefficients):
+		expr += coefficient * x ** (len(coefficients) - index - 1)
+	fitted_curve = np.poly1d(np.polyfit(xdata, ydata, 1))(x_latent)
+	eq = sym.Eq(y, expr)
+	
+	#Chi-square
+	model = np.poly1d(np.polyfit(xdata, ydata, 1))(xdata)
+	chi2 = stats.chisquare(ydata, f_exp = model)
+	
+	#Coefficient of determination
+	residuals =  ydata - model
+	rss = np.sum(residuals**2)
+	tss = np.sum((ydata-np.mean(ydata))**2)
+	r_squared = 1 - (rss / tss)
+	
 	layout = [
-		[sg.Canvas(key='CANVAS')],
+		[sg.Canvas(key='CANVAS', size=(640, 480))],
+		[sg.Text('Correlation coefficients'), sg.InputText(f'{rho} ({meaning})', readonly=True)],
+		[sg.Text('Fitting function'), sg.InputText(f'{eq}', readonly=True)],
+		[sg.Text('Chi-square'), sg.InputText(f'{chi2[0]}', readonly=True)],
+		[sg.Text('p-value'), sg.InputText(f'{chi2[1]}', readonly=True)],
+		[sg.Text('Coefficient of determination'), sg.InputText(f'{r_squared}', readonly=True)],
 		[sg.Button("Back"), sg.Button('Next'), sg.Button('Exit')]
 	]
 	
@@ -20,16 +84,15 @@ def ScatterGraph(df, xName, yName):
 	
 	window = sg.Window('Title', layout, finalize=True, location=win_location)
 	
-	x = df[xName].values
-	y = df[yName].values
-	
+	#Graphs
 	fig = plt.Figure()
-	ax = fig.add_subplot(111)
-	ax.scatter(x, y)
-	ax.set_title(f"Correlation between {xName} and {yName}")
-	ax.set_xlabel(xName)
-	ax.set_ylabel(yName)
-	ax.grid(True)
+	ax1 = fig.add_subplot(111)
+	ax1.scatter(xdata, ydata)
+	ax1.set_title(f"Correlation between {xName} and {yName}")
+	ax1.set_xlabel(xName)
+	ax1.set_ylabel(yName)
+	ax1.plot(x_latent, fitted_curve, c="red")
+	ax1.grid(True)
 	
 	fig_agg = draw_figure(window['CANVAS'].TKCanvas, fig)
 	
