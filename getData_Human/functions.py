@@ -10,8 +10,8 @@ def fileselect():
 	sg.theme('Dark Brown')
 	
 	filetype = (("csv files", "*.csv"), )
-	filebrows = sg.FileBrowse(key="-FILE-", file_types=(filetype), initial_folder=os.getcwd())
-	filebrows2 = sg.FileBrowse(key="-FILE2-", file_types=(filetype), initial_folder=os.getcwd())
+	filebrows = sg.FileBrowse(key="-FILE-", file_types=filetype, initial_folder=os.getcwd())
+	filebrows2 = sg.FileBrowse(key="-FILE2-", file_types=filetype, initial_folder=os.getcwd())
 	
 	layout = [
 		[sg.Text("ファイル"), sg.InputText(), filebrows],

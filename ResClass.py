@@ -3,6 +3,7 @@ import Fit
 import Main
 import Basic
 import CommandClass
+import processing
 
 class Status(Enum):
 	NULL = 0
@@ -28,6 +29,21 @@ def basic(res):
 	elif res == Basic.Basic.Status.NEXT:
 		return Status.BACK
 	elif res == Basic.Basic.Status.QUIT:
+		return Status.QUIT
+	return Status.NULL
+
+def Processing(res):
+	if res == processing.processing.Status.SUCCESS:
+		return Status.SUCCESS
+	elif res == processing.processing.Status.ERROR:
+		return Status.ERROR
+	elif res == processing.processing.Status.BACK:
+		return Status.BACK
+	elif res == processing.processing.Status.NEXT:
+		return Status.BACK
+	elif res == processing.processing.Status.FAILURE:
+		return Status.BACK
+	elif res == processing.processing.Status.QUIT:
 		return Status.QUIT
 	return Status.NULL
 

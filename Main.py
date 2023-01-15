@@ -2,6 +2,7 @@ import PySimpleGUI as sg
 from enum import Enum, auto
 from Fit.FitData import FitData
 from Basic.Basic import Basic
+from processing.processing import mergeFiles, addNewData
 import ResClass
 import os
 import platform
@@ -14,6 +15,8 @@ class Status(Enum):
 	ERROR = auto()
 	GET_DATA = auto()
 	BASIC = auto()
+	ADD = auto()
+	CONCAT = auto()
 	FIT_2D = auto()
 	FIT_3D = auto()
 	FIT_mD = auto()
@@ -21,6 +24,8 @@ class Status(Enum):
 def main(default):
 	dic = {
 		Status.GET_DATA: 'Make DataFile',
+		Status.ADD: 'Add New Column',
+		Status.CONCAT: 'Concat 2 Files',
 		Status.BASIC: 'Calculate Basic Statistic',
 		Status.FIT_2D: 'Do Curve Fitting and Show 2D Graph',
 		Status.FIT_3D: 'Do Curve Fitting and Show 3D Graph',
@@ -33,6 +38,10 @@ def main(default):
 		return (ResClass.readGetData(getData()), dic[res])
 	elif res == Status.BASIC:
 		return (ResClass.basic(Basic()), dic[res])
+	elif res == Status.ADD:
+		return (ResClass.Processing(addNewData()), dic[res])
+	elif res == Status.CONCAT:
+		return (ResClass.Processing(mergeFiles()), dic[res])
 	elif res == Status.FIT_2D:
 		return (ResClass.readFit2d(FitData(2)), dic[res])
 	elif res == Status.FIT_3D:

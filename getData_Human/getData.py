@@ -2,6 +2,7 @@ import sys
 import platform
 import functions
 import CommandClass as cc
+import PySimpleGUI as sg
 
 def make_dpi_aware():
 	import ctypes
