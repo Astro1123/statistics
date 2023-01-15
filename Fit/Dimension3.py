@@ -144,11 +144,11 @@ def ScatterGraphm(df, xName):
 	z = sym.symbols("z")
 	x = []
 	for i in range(len(xdata) - 1):
-		x.append(sym.symbols("x{i}"))
+		x.append(sym.symbols(f"x_{i}"))
 	expr = function_m(a, x)
 	fitted_curve = function_m(a, x_latent[:-1])
-	#eq = sym.Eq(z, expr)
-	eq = a
+	eq = sym.Eq(z, expr)
+	#eq = a
 	
 	"""
 	obj = io.BytesIO()
