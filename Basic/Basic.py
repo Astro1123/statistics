@@ -123,8 +123,8 @@ def CalcData(df, sel, binval):
 		[
 			[sg.Text('Range'), sg.InputText(f'{rangeval}', readonly=True)],
 			[sg.Text('Interquartile range'), sg.InputText(f'{iqr}', readonly=True)],
-			[sg.Text('Sample variance'), sg.InputText(f'{rangeval}', readonly=True)],
-			[sg.Text('Unbiased variance'), sg.InputText(f'{var}', readonly=True)],
+			[sg.Text('Sample variance'), sg.InputText(f'{var}', readonly=True)],
+			[sg.Text('Unbiased variance'), sg.InputText(f'{uvar}', readonly=True)],
 			[sg.Text('Corrected sample standard deviation'), sg.InputText(f'{cstd}', readonly=True)],
 			[sg.Text('Uncorrected sample standard deviation'), sg.InputText(f'{ustd}', readonly=True)],
 			[sg.Text('Skewness'), sg.InputText(f'{skew}', readonly=True)],
