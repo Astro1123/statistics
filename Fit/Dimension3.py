@@ -255,7 +255,7 @@ def SelectDatam(*data):
 	
 	chkboxList = [sg.Checkbox(item) for item in dataName]
 	columns = sg.Column(
-		makeColumnList(chkboxList, 'Select data what you want to use', 7, dataName), scrollable=True, size=(640,480)
+		makeColumnList(chkboxList, 'Select data which you want to use', 7, dataName), scrollable=True, size=(640,480)
 	)
 	
 	layout = [

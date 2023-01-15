@@ -1,6 +1,7 @@
 import PySimpleGUI as sg
 from enum import Enum, auto
 from Fit.FitData import FitData
+from Basic.Basic import Basic
 import ResClass
 import os
 import platform
@@ -12,22 +13,26 @@ class Status(Enum):
 	QUIT = auto()
 	ERROR = auto()
 	GET_DATA = auto()
+	BASIC = auto()
 	FIT_2D = auto()
 	FIT_3D = auto()
 	FIT_mD = auto()
 
 def main(default):
 	dic = {
-		Status.GET_DATA: 'make DataFile',
-		Status.FIT_2D: 'do Curve Fitting and show 2D Graph',
-		Status.FIT_3D: 'do Curve Fitting and show 3D Graph',
-		Status.FIT_mD: 'do Curve Fitting (multi-dimension)'
+		Status.GET_DATA: 'Make DataFile',
+		Status.BASIC: 'Calculate Basic Statistic',
+		Status.FIT_2D: 'Do Curve Fitting and Show 2D Graph',
+		Status.FIT_3D: 'Do Curve Fitting and Show 3D Graph',
+		Status.FIT_mD: 'Do Curve Fitting (Multi-dimension)'
 	}
 	
 	res = select(default, dic)
 	
 	if res == Status.GET_DATA:
 		return (ResClass.readGetData(getData()), dic[res])
+	elif res == Status.BASIC:
+		return (ResClass.basic(Basic()), dic[res])
 	elif res == Status.FIT_2D:
 		return (ResClass.readFit2d(FitData(2)), dic[res])
 	elif res == Status.FIT_3D:
@@ -44,7 +49,7 @@ def select(default, dic):
 	
 	layout = [
 		[sg.Combo(selectData, default_value=default, readonly=True, key='Combo')],
-		[sg.Submit(), sg.Button('Exit')]
+		[sg.Button('Exit'), sg.Submit()]
 	]
 	window = sg.Window('Theme Browser', layout)
 	

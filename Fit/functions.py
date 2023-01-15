@@ -169,7 +169,7 @@ def LoadData(filename):
 	sg.theme('Dark Brown')
 	
 	layout = [
-		[sg.Text("ファイル"), sg.InputText(default_text=filename, key='Text'), sg.FileBrowse(key="file")], 
+		[sg.Text("File"), sg.InputText(default_text=filename, key='Text'), sg.FileBrowse(key="file")], 
 		[sg.Button("Back"), sg.Button('Exit'), sg.Submit()]
 	]
 	window = sg.Window('Title', layout)

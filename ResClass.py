@@ -1,6 +1,7 @@
 from enum import Enum, auto
 import Fit
 import Main
+import Basic
 import CommandClass
 
 class Status(Enum):
@@ -15,6 +16,19 @@ def readGetData(res):
 		return Status.ERROR
 	if res == 0:
 		return Status.SUCCESS
+	return Status.NULL
+
+def basic(res):
+	if res == Basic.Basic.Status.SUCCESS:
+		return Status.SUCCESS
+	elif res == Basic.Basic.Status.ERROR:
+		return Status.ERROR
+	elif res == Basic.Basic.Status.BACK:
+		return Status.BACK
+	elif res == Basic.Basic.Status.NEXT:
+		return Status.BACK
+	elif res == Basic.Basic.Status.QUIT:
+		return Status.QUIT
 	return Status.NULL
 
 def readFit2d(res):
