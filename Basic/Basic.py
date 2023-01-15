@@ -110,12 +110,12 @@ def CalcData(df, sel, binval):
 	columnsA = sg.Column(
 		[
 			[sg.Text('Average'), sg.InputText(f'{average}', readonly=True)],
-			[sg.Text('Median'), sg.InputText(f'{median}', readonly=True)],
 			[sg.Text('Max'), sg.InputText(f'{maxval}', readonly=True)],
 			[sg.Text('Third quartile'), sg.InputText(f'{q3}', readonly=True)],
-			[sg.Text('Mid-range'), sg.InputText(f'{midrange}', readonly=True)],
+			[sg.Text('Median'), sg.InputText(f'{median}', readonly=True)],
 			[sg.Text('First quartile'), sg.InputText(f'{q1}', readonly=True)],
 			[sg.Text('Min'), sg.InputText(f'{minval}', readonly=True)],
+			[sg.Text('Mid-range'), sg.InputText(f'{midrange}', readonly=True)],
 			[sg.Text('Mode'), sg.InputText(f'{modeval}', readonly=True)],
 		]
 	)
