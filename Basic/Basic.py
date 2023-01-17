@@ -216,7 +216,7 @@ def CalcData(df, sel, binval, saveMet):
 			res = NextCmd()
 			break
 		elif event == 'Config':
-			res = CmdCmd((ExecuteCommand.CONFIG, None))
+			res = CmdCmd((ExecuteCommand.CONFIG, pd.DataFrame(columns=[sel])))
 			break
 		elif event == 'Save':
 			if saveMet:
@@ -280,6 +280,7 @@ def LoadData(filename):
 
 def Basic():
 	filename = ''
+	selectname = 'Select'
 	select = None
 	binval = 10
 	binMet = False
@@ -305,27 +306,31 @@ def Basic():
 				if cmd == ExecuteCommand.SAVE:
 					(code, _) = makeSaveData(data).splitInfo()
 				elif cmd == ExecuteCommand.CONFIG:
-					configValues = (binval, binMet, saveMet)
+					configValues = (binval, binMet, saveMet, data, selectname)
 					(code5, cmd) = configulation(configValues).splitInfo()
 					if code5 == Status.QUIT:
 						return code5
 					elif code5 == Status.SUCCESS:
-						(binval, binMet, saveMet) = cmd
+						(binval, binMet, saveMet, selectname) = cmd
 	return Status.NULL
 
 def configulation(configValues):
-	(binval, binMet, saveMet) = configValues
+	(binval, binMet, saveMet, df, selectname) = configValues
 	
-	#method = ['Square-root choice']
+	method = ['Square-root choice']
 	
-	widget1 = [[sg.Text('Range of Bins'), sg.InputText(key='BinRange', default_text=str(binval))]]
-	#widget2 = [[sg.Combo(values=method, key='Method')]]
-	widget = widget1# if configValues else widget2
+	widget1 = [
+		[sg.Text('Range of Bins'), sg.InputText(key='BinRange', default_text=str(binval))]
+	]
+	widget2 = [[sg.Combo(method, key='Method', default_value=selectname)]]
+	
+	column1 = sg.Column( widget1, key='col1', visible=not binMet )
+	column2 = sg.Column( widget2, key='col2', visible=binMet )
 	
 	tab1 = sg.Tab('Range of Bins' ,
 		[
-			#[sg.Radio('manual', group_id='0', key='manual', enable_events=True, default=not binMet), sg.Radio('auto', group_id='0',key='auto',  enable_events=True, default=binMet)],
-			[sg.Column(widget, key='col')]
+			[sg.Radio('manual', group_id='0', key='manual', enable_events=True, default=not binMet), sg.Radio('auto', group_id='0',key='auto',  enable_events=True, default=binMet)],
+			[column1, column2]
 		]
 	)
 	tab2 = sg.Tab('Save data' ,
@@ -347,22 +352,27 @@ def configulation(configValues):
 			res = BackCmd()
 			break
 		elif event == 'Run':
-			binval = int(values['BinRange'])
-			binMet = True
+			binMet = values['auto']
+			if values['manual']:
+				binval = int(values['BinRange'])
+			else:
+				selectname = values['Method']
+				binval = calcBinRange(df, selectname)
 			saveMet = values['DSAVE']
-			res = SuccessCmd((binval, binMet, saveMet))
+			res = SuccessCmd((binval, binMet, saveMet, selectname))
 			break
-			#if values['Combo'] in dataName:
-				#if 'Text' != '':
-					#res = SuccessCmd(values['Combo'])
-					#break
 		elif event == 'auto':
-			pass
+			window["col1"].update(visible=values['manual'])
+			window["col2"].update(visible=values['auto'])
 		elif event == 'manual':
-			pass
+			window["col1"].update(visible=values['manual'])
+			window["col2"].update(visible=values['auto'])
 	
 	window.close()
 	return res
+
+def calcBinRange(df, method):
+	return 10
 
 def makeSaveData(data):
 	(df, dic) = data
