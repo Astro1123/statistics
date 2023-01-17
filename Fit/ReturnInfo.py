@@ -21,6 +21,8 @@ class Status(Enum):
 	BACK = auto()
 	QUIT = auto()
 	NEXT = auto()
+	FAILURE = auto()
+	COMMAND = auto()
 
 def QuitCmd():
 	res = ReturnInfo()
@@ -41,3 +43,8 @@ def SuccessCmd(*arg):
 	res = ReturnInfo()
 	res.makeInfo(Status.SUCCESS, *arg)
 	return res
+	
+def FailCmd():
+    res = ReturnInfo()
+    res.makeInfo(Status.FAILURE, '')
+    return res

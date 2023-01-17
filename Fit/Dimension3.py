@@ -148,7 +148,6 @@ def ScatterGraphm(df, xName):
 	expr = function_m(a, x)
 	fitted_curve = function_m(a, x_latent[:-1])
 	eq = sym.Eq(z, expr)
-	#eq = a
 	
 	"""
 	obj = io.BytesIO()

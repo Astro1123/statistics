@@ -14,6 +14,7 @@ class Status(Enum):
 	NEXT = auto()
 	QUIT = auto()
 	FAILURE = auto()
+	COMMAND = auto()
 
 class ReturnInfo:
 	status = -1
@@ -47,15 +48,15 @@ def BackCmd():
 	res.makeInfo(Status.BACK, '')
 	return res
 
-def FailCmd():
-	res = ReturnInfo()
-	res.makeInfo(Status.FAILURE, '')
-	return res
-
 def SuccessCmd(data):
 	res = ReturnInfo()
 	res.makeInfo(Status.SUCCESS, data)
 	return res
+
+def FailCmd():
+    res = ReturnInfo()
+    res.makeInfo(Status.FAILURE, '')
+    return res
 
 
 def mergeFiles():
@@ -85,7 +86,7 @@ def addNewData():
 		(_, df) = OpenFile(filename).splitInfo()
 		(cmd, exprData) = InputFormula(df).splitInfo()
 		if cmd == Status.QUIT:
-			return cmd.getStatus()
+			return cmd
 		elif cmd == Status.SUCCESS:
 			(res, df) = Calc(df, exprData).splitInfo()
 			res = save(df)

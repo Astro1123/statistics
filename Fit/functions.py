@@ -199,3 +199,11 @@ def draw_figure(canvas, figure):
 	figure_canvas_agg.draw()
 	figure_canvas_agg.get_tk_widget().pack(side='top', fill='both', expand=1)
 	return figure_canvas_agg
+
+def save(df):
+	filename = sg.popup_get_file('save', save_as=True)
+	if filename != None:
+		df.to_csv(filename)
+		sg.popup('Complete')
+		return ri.SuccessCmd('')
+	return ri.FailCmd()
