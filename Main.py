@@ -48,7 +48,7 @@ def main(default):
 		return (ResClass.readFit2d(FitData(2)), dic[res])
 	elif res == Status.FIT_3D:
 		return (ResClass.readFit2d(FitData(3)), dic[res])
-	elif res == Status.FIT_mD:
+	elif res == Status.FIT_MD:
 		return (ResClass.readFit2d(FitData(0)), dic[res])
 	else:
 		return (ResClass.readMain(res), 'Select')
