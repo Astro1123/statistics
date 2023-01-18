@@ -1,6 +1,8 @@
 from . import functions
 from . import Dimension3
 from .ReturnInfo import Status
+from .ReturnInfo import ExecuteCommand
+from .residualPlot import plotResiduals
 
 def FitData(d):
 	filename = ''
@@ -17,9 +19,18 @@ def FitData(d):
 					return code3
 				elif code3 == Status.BACK:
 					break
-				(code4, res2) = plot(res)
-				if code4 != Status.BACK:
-					return code4
+				while True:
+					(code4, res2) = plot(res)
+					if code4 == Status.COMMAND:
+						(cmd, *data) = res2
+						if cmd == ExecuteCommand.RPLOT:
+							code5 = plotResiduals(data).getStatus()
+							if code5 == Status.QUIT:
+								return code5
+					elif code4 != Status.BACK:
+						return code4
+					else:
+						break
 		elif d == 3:
 			while True:
 				(code3, res) = select(df, res2, d)
@@ -27,9 +38,18 @@ def FitData(d):
 					return code3
 				elif code3 == Status.BACK:
 					break
-				(code4, res2) = plot3(res)
-				if code4 != Status.BACK:
-					return code4
+				while True:
+					(code4, res2) = plot3(res)
+					if code4 == Status.COMMAND:
+						(cmd, *data) = res2
+						if cmd == ExecuteCommand.RPLOT:
+							code5 = plotResiduals(data).getStatus()
+							if code5 == Status.QUIT:
+								return code5
+					elif code4 != Status.BACK:
+						return code4
+					else:
+						break
 		else:
 			while True:
 				(code3, res) = select(df, res2, d)
@@ -37,9 +57,18 @@ def FitData(d):
 					return code3
 				elif code3 == Status.BACK:
 					break
-				(code4, res2) = plotm(res)
-				if code4 != Status.BACK:
-					return code4
+				while True:
+					(code4, res2) = plotm(res)
+					if code4 == Status.COMMAND:
+						(cmd, *data) = res2
+						if cmd == ExecuteCommand.RPLOT:
+							code5 = plotResiduals(data).getStatus()
+							if code5 == Status.QUIT:
+								return code5
+					elif code4 != Status.BACK:
+						return code4
+					else:
+						break
 	return Status.NULL
 
 def load(filename):
@@ -87,6 +116,8 @@ def select(df, res, d):
 			l = (df, xName)
 	elif res.getStatus() == Status.BACK:
 		return (Status.BACK, df)
+	elif res.getStatus() == Status.QUIT:
+		return (Status.QUIT, 0)
 	else:
 		return (Status.ERROR, -1)
 	return (Status.SUCCESS, l)
@@ -98,6 +129,8 @@ def plot(data):
 		return (Status.BACK, data)
 	if res.getStatus() == Status.NEXT:
 		return (Status.NEXT, 0)
+	if res.getStatus() == Status.COMMAND:
+		return (Status.COMMAND, res.getData())
 	else:
 		return (Status.ERROR, -1)
 	
@@ -108,6 +141,8 @@ def plot3(data):
 		return (Status.BACK, data)
 	if res.getStatus() == Status.NEXT:
 		return (Status.NEXT, 0)
+	if res.getStatus() == Status.COMMAND:
+		return (Status.COMMAND, res.getData())
 	else:
 		return (Status.ERROR, -1)
 	
@@ -118,5 +153,7 @@ def plotm(data):
 		return (Status.BACK, data)
 	if res.getStatus() == Status.NEXT:
 		return (Status.NEXT, 0)
+	if res.getStatus() == Status.COMMAND:
+		return (Status.COMMAND, res.getData())
 	else:
 		return (Status.ERROR, -1)

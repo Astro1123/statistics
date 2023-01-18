@@ -69,6 +69,15 @@ def ScatterGraph(df, xName, yName):
 	rss = np.sum(residuals**2)
 	tss = np.sum((ydata-np.mean(ydata))**2)
 	r_squared = 1 - (rss / tss)
+	count = len(xdata)
+	variable = 1
+	adj_r_squared = 1 - ((rss / (count - variable - 1)) / (tss / (count - 1)))
+
+	#Multiple correlation coefficient
+	mcc_data = np.array([ydata, model])
+	corrcoef = np.corrcoef(mcc_data)
+	mcc = corrcoef[0][1]
+	meaning = meaningCov(mcc)
 	
 	layout = [
 		[sg.Canvas(key='CANVAS', size=(640, 480))],
@@ -77,7 +86,9 @@ def ScatterGraph(df, xName, yName):
 		[sg.Text('Chi-square'), sg.InputText(f'{chi2[0]}', readonly=True)],
 		[sg.Text('p-value'), sg.InputText(f'{chi2[1]}', readonly=True)],
 		[sg.Text('Coefficient of determination'), sg.InputText(f'{r_squared}', readonly=True)],
-		[sg.Button("Back"), sg.Button('Next'), sg.Button('Exit')]
+		[sg.Text('Adjusted coefficient of determination'), sg.InputText(f'{adj_r_squared}', readonly=True)],
+		[sg.Text('Multiple correlation coefficient'), sg.InputText(f'{mcc}', readonly=True)],
+		[sg.Button("Back"), sg.Button('Next'), sg.Button('Residuals'), sg.Button('Exit')]
 	]
 	
 	win_location = (0, 0)
@@ -107,6 +118,9 @@ def ScatterGraph(df, xName, yName):
 			break
 		elif event == 'Next':
 			res = ri.NextCmd()
+			break
+		elif event == 'Residuals':
+			res = ri.CmdCmd(ri.ExecuteCommand.RPLOT, residuals, model, (count, variable))
 			break
 	
 	window.close()

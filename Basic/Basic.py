@@ -7,6 +7,7 @@ import statistics
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from scipy.special import loggamma
+import math
 
 class ExecuteCommand(Enum):
 	NULL = 0
@@ -181,28 +182,64 @@ def CalcData(df, sel, binval, saveMet):
 		]
 	)
 	
-	columns = sg.Column(
+	columns1 = sg.Column(
 		[
 			[FrameA],
 			[FrameB],
 			[FrameC],
-			[sg.Button("Config"), sg.Button('Save'), sg.Button("Back"), sg.Button('Next'), sg.Button('Exit')]
 		]
 	)
-	
-	fig = plt.Figure()
-	ax1 = fig.add_subplot(111)
+
+	#https://corvus-window.com/python_standard-normal/
+	#https://toukeier.hatenablog.com/entry/2019/09/08/224346
+
+	fig1 = plt.Figure()
+	ax1 = fig1.add_subplot(111)
 	ax1.hist(data, bins=binval)
 	ax1.set_title(f"Histogram of {sel}")
 	
+	fig2 = plt.Figure()
+	ax2 = fig2.add_subplot(111)
+	stats.probplot(data, dist="norm", plot=ax2)
+	ax2.set_title(f"Probability plot of {sel} (Normal distribution)")
+	ax2.grid(True)
+	
+	result1 = stats.shapiro(data)
+	result2 = stats.ks_1samp(data, stats.norm.cdf)
+	
+	FrameSW = sg.Frame( 'Shapiro–Wilk test', 
+		[
+			[sg.Text('statistic'), sg.InputText(f'{result1[0]}', readonly=True)],
+			[sg.Text('p-value'), sg.InputText(f'{result1[1]}', readonly=True)],
+		]
+	)
+	FrameKS = sg.Frame( 'Kolmogorov–Smirnov test', 
+		[
+			[sg.Text('statistic'), sg.InputText(f'{result2[0]}', readonly=True)],
+			[sg.Text('p-value'), sg.InputText(f'{result2[1]}', readonly=True)],
+		]
+	)
+	
+	columns2 = sg.Column(
+		[
+			[FrameSW],
+			[FrameKS],
+		]
+	)
+	
+	t1 = sg.Tab('Histogram' ,[[columns1, sg.Canvas(key='CANVAS_H')]])
+	t2 = sg.Tab('Probability plot' ,[[columns2, sg.Canvas(key='CANVAS_P')]])
+	
 	layout = [
-		[columns, sg.Canvas(key='CANVAS')]
+		[sg.TabGroup ([[t1 ,t2]])],
+		[sg.Button("Config"), sg.Button('Save'), sg.Button("Back"), sg.Button('Next'), sg.Button('Exit')]
 	]
 	
 	win_location = (0, 0)
 	window = sg.Window('Theme Browser', layout, finalize=True, location=win_location)
 	
-	draw_figure(window['CANVAS'].TKCanvas, fig)
+	draw_figure(window['CANVAS_H'].TKCanvas, fig1)
+	draw_figure(window['CANVAS_P'].TKCanvas, fig2)
 	
 	while True:
 		event, values = window.read()
@@ -216,7 +253,7 @@ def CalcData(df, sel, binval, saveMet):
 			res = NextCmd()
 			break
 		elif event == 'Config':
-			res = CmdCmd((ExecuteCommand.CONFIG, pd.DataFrame(columns=[sel])))
+			res = CmdCmd((ExecuteCommand.CONFIG, (pd.DataFrame(columns=[sel]), dic)))
 			break
 		elif event == 'Save':
 			if saveMet:
@@ -315,14 +352,15 @@ def Basic():
 	return Status.NULL
 
 def configulation(configValues):
-	(binval, binMet, saveMet, df, selectname) = configValues
-	
-	method = ['Square-root choice']
+	(binval, binMet, saveMet, data, selectname) = configValues
+	(df, dic) = data
+
+	method = ['Square-root choice', "Sturges' formula", "Scott's choice", "Freedman-Diaconis' choice"]
 	
 	widget1 = [
 		[sg.Text('Range of Bins'), sg.InputText(key='BinRange', default_text=str(binval))]
 	]
-	widget2 = [[sg.Combo(method, key='Method', default_value=selectname)]]
+	widget2 = [[sg.Combo(method, key='Method', default_value=selectname, readonly=True)]]
 	
 	column1 = sg.Column( widget1, key='col1', visible=not binMet )
 	column2 = sg.Column( widget2, key='col2', visible=binMet )
@@ -357,10 +395,11 @@ def configulation(configValues):
 				binval = int(values['BinRange'])
 			else:
 				selectname = values['Method']
-				binval = calcBinRange(df, selectname)
+				binval = calcBinRange((df, dic), selectname)
 			saveMet = values['DSAVE']
-			res = SuccessCmd((binval, binMet, saveMet, selectname))
-			break
+			if (selectname in method and values['auto']) or values['manual']:
+				res = SuccessCmd((binval, binMet, saveMet, selectname))
+				break
 		elif event == 'auto':
 			window["col1"].update(visible=values['manual'])
 			window["col2"].update(visible=values['auto'])
@@ -371,7 +410,19 @@ def configulation(configValues):
 	window.close()
 	return res
 
-def calcBinRange(df, method):
+def calcBinRange(data, method):
+	print
+	(df, dic) = data
+	if method == 'Square-root choice':
+		return round(math.sqrt(dic['Count']))
+	elif method == "Sturges' formula":
+		return math.ceil(math.log2(dic['Count']) + 1)
+	elif method == "Scott's choice":
+		h = 3.5 * dic['Uncorrected sample standard deviation'] / pow(dic['Count'], 1/3)
+		return round(dic['Range'] / h)
+	elif method == "Freedman-Diaconis' choice":
+		h = (dic['Third quartile'] - dic['First quartile']) / pow(dic['Count'], 1/3) * 2
+		return round(dic['Range'] / h)
 	return 10
 
 def makeSaveData(data):

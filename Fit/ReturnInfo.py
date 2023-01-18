@@ -1,5 +1,9 @@
 from enum import Enum, auto
 
+class ExecuteCommand(Enum):
+	NULL = 0
+	RPLOT = auto()
+
 class ReturnInfo:
 	status = -1
 	DataList = []
@@ -7,6 +11,10 @@ class ReturnInfo:
 	def makeInfo(self, status, *arg):
 		self.status = status
 		self.DataList = [x for x in arg]
+	
+	def makeInfoCmd(self, status, cmd, *arg):
+		self.status = status
+		self.DataList = [cmd, [x for x in arg]]
 		
 	def getData(self):
 		return self.DataList
@@ -42,6 +50,11 @@ def BackCmd():
 def SuccessCmd(*arg):
 	res = ReturnInfo()
 	res.makeInfo(Status.SUCCESS, *arg)
+	return res
+
+def CmdCmd(cmd, *arg):
+	res = ReturnInfo()
+	res.makeInfoCmd(Status.COMMAND, cmd, *arg)
 	return res
 	
 def FailCmd():

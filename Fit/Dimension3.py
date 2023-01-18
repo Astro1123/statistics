@@ -14,6 +14,29 @@ import io
 
 from . import ReturnInfo as ri
 
+def meaningCov(rho):
+	if (rho >= 0.7):
+		return "Very strong positive relationship"
+	elif (rho >= 0.4):
+		return "Strong positive relationship"
+	elif (rho >= 0.3):
+		return "Moderate positive relationship"
+	elif (rho >= 0.2):
+		return "Weak positive relationship"
+	elif (rho > 0):
+		return "No or negligible relationship"
+	elif (rho <= 0.7):
+		return "Very strong negative relationship"
+	elif (rho <= 0.4):
+		return "Strong negative relationship"
+	elif (rho <= 0.3):
+		return "Moderate negative relationship"
+	elif (rho <= 0.2):
+		return "Weak negative relationship"
+	elif (rho < 0):
+		return "No or negligible relationship"
+	return "No relationship [zero correlation]"
+
 def fiting_func(param ,x ,y ,z):
     residual = z - (param[0] * x + param[1] * y + param[2])
     return residual
@@ -48,18 +71,34 @@ def ScatterGraph3(df, xName, yName, zName):
 	fitted_curve = function(a, x_latent, y_latent)
 	eq = sym.Eq(z, expr)
 	
-	#Coefficient of determination
+	#Chi-square
 	model = function(a, xdata, ydata)
+	chi2 = stats.chisquare(zdata, f_exp = model)
+	
+	#Coefficient of determination
 	residuals =  zdata - model
 	rss = np.sum(residuals**2)
 	tss = np.sum((zdata-np.mean(zdata))**2)
 	r_squared = 1 - (rss / tss)
+	count = len(xdata)
+	variable = 2
+	adj_r_squared = 1 - ((rss / (count - variable - 1)) / (tss / (count - 1)))
+
+	#Multiple correlation coefficient
+	mcc_data = np.array([zdata, model])
+	corrcoef = np.corrcoef(mcc_data)
+	mcc = corrcoef[0][1]
+	meaning = meaningCov(mcc)
 	
 	layout = [
 		[sg.Canvas(key='CANVAS', size=(640, 480))],
 		[sg.Text('Fitting function'), sg.InputText(f'{eq}', readonly=True)],
+		[sg.Text('Chi-square'), sg.InputText(f'{chi2[0]}', readonly=True)],
+		[sg.Text('p-value'), sg.InputText(f'{chi2[1]}', readonly=True)],
 		[sg.Text('Coefficient of determination'), sg.InputText(f'{r_squared}', readonly=True)],
-		[sg.Button("Back"), sg.Button('Next'), sg.Button('Exit')]
+		[sg.Text('Adjusted coefficient of determination'), sg.InputText(f'{adj_r_squared}', readonly=True)],
+		[sg.Text('Multiple correlation coefficient'), sg.InputText(f'{mcc}', readonly=True)],
+		[sg.Button("Back"), sg.Button('Next'), sg.Button('Residuals'), sg.Button('Exit')]
 	]
 	
 	win_location = (0, 0)
@@ -98,6 +137,9 @@ def ScatterGraph3(df, xName, yName, zName):
 			break
 		elif event == 'Next':
 			res = ri.NextCmd()
+			break
+		elif event == 'Residuals':
+			res = ri.CmdCmd(ri.ExecuteCommand.RPLOT, residuals, model, (count, variable))
 			break
 	
 	window.close()
@@ -155,19 +197,35 @@ def ScatterGraphm(df, xName):
     dvioptions=["-T", "tight", "-z", "0", "--truecolor", "-D 600", "-bg", "Transparent"])
 	"""
 	
-	#Coefficient of determination
+	#Chi-square
 	model = function_m(a, xdata[:-1])
+	chi2 = stats.chisquare(data[-1], f_exp = model)
+	
+	#Coefficient of determination
 	residuals =  data[-1] - model
 	rss = np.sum(residuals**2)
 	tss = np.sum((data[-1]-np.mean(data[-1]))**2)
 	r_squared = 1 - (rss / tss)
+	count = len(xdata[-1])
+	variable = len(xdata[:-1])
+	adj_r_squared = 1 - ((rss / (count - variable - 1)) / (tss / (count - 1)))
+
+	#Multiple correlation coefficient
+	mcc_data = np.array([data[-1], model])
+	corrcoef = np.corrcoef(mcc_data)
+	mcc = corrcoef[0][1]
+	meaning = meaningCov(mcc)
 	
 	layout = [
 		#[sg.Image(filename='', key='-image-')],
 		[sg.Text('Fitting function'), sg.InputText(f'{eq}', readonly=True)],
 		[sg.Text('parameter'), sg.InputText(f'{xName}', readonly=True)],
+		[sg.Text('Chi-square'), sg.InputText(f'{chi2[0]}', readonly=True)],
+		[sg.Text('p-value'), sg.InputText(f'{chi2[1]}', readonly=True)],
 		[sg.Text('Coefficient of determination'), sg.InputText(f'{r_squared}', readonly=True)],
-		[sg.Button("Back"), sg.Button('Next'), sg.Button('Exit')]
+		[sg.Text('Adjusted coefficient of determination'), sg.InputText(f'{adj_r_squared}', readonly=True)],
+		[sg.Text('Multiple correlation coefficient'), sg.InputText(f'{mcc}', readonly=True)],
+		[sg.Button("Back"), sg.Button('Next'), sg.Button('Residuals'), sg.Button('Exit')]
 	]
 	
 	win_location = (0, 0)
@@ -186,6 +244,9 @@ def ScatterGraphm(df, xName):
 			break
 		elif event == 'Next':
 			res = ri.NextCmd()
+			break
+		elif event == 'Residuals':
+			res = ri.CmdCmd(ri.ExecuteCommand.RPLOT, residuals, model, (count, variable))
 			break
 	
 	window.close()
@@ -278,7 +339,7 @@ def SelectDatam(*data):
 			if values['ComboZ'] in sel:
 				sel.remove(values['ComboZ'])
 				sel.append(values['ComboZ'])
-				if len(sel) > 3:
+				if len(sel) > 1:
 					res = ri.SuccessCmd(df[sel], sel)
 					break
 	
