@@ -48,8 +48,6 @@ def plotResiduals(data):
 	rss = np.sum(residuals**2)
 	tss = np.sum((ydata-np.mean(ydata))**2)
 	r_squared = 1 - (rss / tss)
-	count = len(ydata)
-	variable = 1
 	adj_r_squared = 1 - ((rss / (count - variable - 1)) / (tss / (count - 1)))
 	
 	mae = np.sum(np.abs(residuals)) / count
