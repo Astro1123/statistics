@@ -34,17 +34,16 @@ def meaningCov(rho):
 		return "No or negligible relationship"
 	return "No relationship [zero correlation]"
 
-def plotResiduals(data):
-	(residuals, model, d) = data[0]
-	(count, variable) = d
+def plotResiduals(inputData):
+	(residuals, model, d) = inputData[0]
+	(count, variable, data) = d
 	sg.theme('Dark Brown')
 
 	#Chi-square
-	ydata = residuals + model
+	ydata = data[-1]
 	chi2 = stats.chisquare(ydata, f_exp = model)
 	
 	#Coefficient of determination
-	residuals =  ydata - model
 	rss = np.sum(residuals**2)
 	tss = np.sum((ydata-np.mean(ydata))**2)
 	r_squared = 1 - (rss / tss)
@@ -54,6 +53,7 @@ def plotResiduals(data):
 	mse = tss / count
 	rmse = np.sqrt(mse)
 	vResiduals = rss / (count - variable - 1)
+	seResiduals = np.sqrt(vResiduals)
 
 	#Multiple correlation coefficient
 	mcc_data = np.array([ydata, model])
@@ -71,6 +71,7 @@ def plotResiduals(data):
 			[sg.Text('RMSE'), sg.InputText(f'{rmse}', readonly=True)],
 			[sg.Text('MAE'), sg.InputText(f'{mae}', readonly=True)],
 			[sg.Text('Variance of residuals'), sg.InputText(f'{vResiduals}', readonly=True)],
+			[sg.Text('Standard error of residuals'), sg.InputText(f'{seResiduals}', readonly=True)],
 			[sg.Text('Coefficient of determination'), sg.InputText(f'{r_squared}', readonly=True)],
 			[sg.Text('Adjusted coefficient of determination'), sg.InputText(f'{adj_r_squared}', readonly=True)],
 			[sg.Text('Multiple correlation coefficient'), sg.InputText(f'{mcc}', readonly=True)],
@@ -102,6 +103,8 @@ def plotResiduals(data):
 	
 	t1 = sg.Tab('Scatter plot' ,[[column1, sg.Canvas(key='CANVAS_S', size=(640, 480))]])
 	t2 = sg.Tab('Probability plot' ,[[column2, sg.Canvas(key='CANVAS_P', size=(640, 480))]])
+	# 標準偏回帰係数
+	# 絶対残差/相対残差
 
 	layout = [
 		[sg.TabGroup ([[t1 ,t2]])],

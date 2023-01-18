@@ -120,7 +120,7 @@ def ScatterGraph(df, xName, yName):
 			res = ri.NextCmd()
 			break
 		elif event == 'Residuals':
-			res = ri.CmdCmd(ri.ExecuteCommand.RPLOT, residuals, model, (count, variable))
+			res = ri.CmdCmd(ri.ExecuteCommand.RPLOT, residuals, model, (count, variable, data))
 			break
 	
 	window.close()

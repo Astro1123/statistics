@@ -19,17 +19,19 @@ class Status(Enum):
 	CONCAT = auto()
 	FIT_2D = auto()
 	FIT_3D = auto()
-	FIT_mD = auto()
+	FIT_MD = auto()
+	FIT_CMP = auto()
 
 def main(default):
 	dic = {
 		Status.GET_DATA: 'Make DataFile',
 		Status.ADD: 'Add New Column',
 		Status.CONCAT: 'Concat 2 Files',
-		Status.BASIC: 'Calculate Basic Statistic',
+		Status.BASIC: 'Calculate Basic Statistics',
 		Status.FIT_2D: 'Do Curve Fitting and Show 2D Graph',
 		Status.FIT_3D: 'Do Curve Fitting and Show 3D Graph',
-		Status.FIT_mD: 'Do Curve Fitting (Multi-dimension)'
+		Status.FIT_MD: 'Do Curve Fitting (Multi-dimension)'
+		#Status.CMP: 'Compare Basic Statistics in 2 Files'
 	}
 	
 	res = select(default, dic)
