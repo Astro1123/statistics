@@ -88,7 +88,7 @@ def ScatterGraph(df, xName, yName):
 		[sg.Text('Coefficient of determination'), sg.InputText(f'{r_squared}', readonly=True)],
 		[sg.Text('Adjusted coefficient of determination'), sg.InputText(f'{adj_r_squared}', readonly=True)],
 		[sg.Text('Multiple correlation coefficient'), sg.InputText(f'{mcc}', readonly=True)],
-		[sg.Button("Back"), sg.Button('Next'), sg.Button('Residuals'), sg.Button('Exit')]
+		[sg.Button("Back"), sg.Button('Next'), sg.Button('Details'), sg.Button('Exit')]
 	]
 	
 	win_location = (0, 0)
@@ -119,8 +119,8 @@ def ScatterGraph(df, xName, yName):
 		elif event == 'Next':
 			res = ri.NextCmd()
 			break
-		elif event == 'Residuals':
-			res = ri.CmdCmd(ri.ExecuteCommand.RPLOT, residuals, model, (count, variable, data))
+		elif event == 'Details':
+			res = ri.CmdCmd(ri.ExecuteCommand.RPLOT, residuals, model, (count, variable, data, coefficients, [xName, yName], []))
 			break
 	
 	window.close()

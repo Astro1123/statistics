@@ -44,6 +44,11 @@ def fiting_func(param ,x ,y ,z):
 def function(a, x, y):
 	return a[0] * x + a[1] * y + a[2]
 
+def toStd(data):
+	ave = np.mean(data)
+	std = np.std(data, ddof=1)
+	return (data - ave) / std
+
 def ScatterGraph3(df, xName, yName, zName):
 	sg.theme('Dark Brown')
 	
@@ -70,6 +75,14 @@ def ScatterGraph3(df, xName, yName, zName):
 	expr = function(a, x, y)
 	fitted_curve = function(a, x_latent, y_latent)
 	eq = sym.Eq(z, expr)
+	
+	#Standardized partial regression coefficient
+	param_std = [0, 0, 0]
+	xdata_std = toStd(xdata)
+	ydata_std = toStd(ydata)
+	zdata_std = toStd(zdata)
+	optimised_param_std =  optimize.leastsq(fiting_func, param_std, args=(xdata_std, ydata_std, zdata_std))
+	alpha = optimised_param_std[0]
 	
 	#Chi-square
 	model = function(a, xdata, ydata)
@@ -98,7 +111,7 @@ def ScatterGraph3(df, xName, yName, zName):
 		[sg.Text('Coefficient of determination'), sg.InputText(f'{r_squared}', readonly=True)],
 		[sg.Text('Adjusted coefficient of determination'), sg.InputText(f'{adj_r_squared}', readonly=True)],
 		[sg.Text('Multiple correlation coefficient'), sg.InputText(f'{mcc}', readonly=True)],
-		[sg.Button("Back"), sg.Button('Next'), sg.Button('Residuals'), sg.Button('Exit')]
+		[sg.Button("Back"), sg.Button('Next'), sg.Button('Details'), sg.Button('Exit')]
 	]
 	
 	win_location = (0, 0)
@@ -138,8 +151,8 @@ def ScatterGraph3(df, xName, yName, zName):
 		elif event == 'Next':
 			res = ri.NextCmd()
 			break
-		elif event == 'Residuals':
-			res = ri.CmdCmd(ri.ExecuteCommand.RPLOT, residuals, model, (count, variable, data))
+		elif event == 'Details':
+			res = ri.CmdCmd(ri.ExecuteCommand.RPLOT, residuals, model, (count, variable, data, a, [xName, yName, zName], alpha))
 			break
 	
 	window.close()
@@ -191,6 +204,14 @@ def ScatterGraphm(df, xName):
 	fitted_curve = function_m(a, x_latent[:-1])
 	eq = sym.Eq(z, expr)
 	
+	#Standardized partial regression coefficient
+	param_std = [0 for i in range(len(xdata))]
+	xdata_std = []
+	for i in range(len(xdata)):
+		xdata_std.append(toStd(xdata[i]))
+	optimised_param_std =  optimize.leastsq(fiting_func_m, param_std, args=tuple(xdata_std))
+	alpha = optimised_param_std[0]
+	
 	"""
 	obj = io.BytesIO()
 	sym.preview(eq, output='png', viewer='BytesIO', outputbuffer=obj, euler=False,
@@ -225,7 +246,7 @@ def ScatterGraphm(df, xName):
 		[sg.Text('Coefficient of determination'), sg.InputText(f'{r_squared}', readonly=True)],
 		[sg.Text('Adjusted coefficient of determination'), sg.InputText(f'{adj_r_squared}', readonly=True)],
 		[sg.Text('Multiple correlation coefficient'), sg.InputText(f'{mcc}', readonly=True)],
-		[sg.Button("Back"), sg.Button('Next'), sg.Button('Residuals'), sg.Button('Exit')]
+		[sg.Button("Back"), sg.Button('Next'), sg.Button('Details'), sg.Button('Exit')]
 	]
 	
 	win_location = (0, 0)
@@ -245,8 +266,8 @@ def ScatterGraphm(df, xName):
 		elif event == 'Next':
 			res = ri.NextCmd()
 			break
-		elif event == 'Residuals':
-			res = ri.CmdCmd(ri.ExecuteCommand.RPLOT, residuals, model, (count, variable, data))
+		elif event == 'Details':
+			res = ri.CmdCmd(ri.ExecuteCommand.RPLOT, residuals, model, (count, variable, data, a, xName, alpha))
 			break
 	
 	window.close()
@@ -335,6 +356,8 @@ def SelectDatam(*data):
 			sel = []
 			for value in values.items():
 				if value[1] and value[0] != 'ComboZ':
+					sel.append(dataName[value[0]])
+				elif not value[1] and value[0] != 'ComboZ' and values['ComboZ'] == dataName[value[0]]:
 					sel.append(dataName[value[0]])
 			if values['ComboZ'] in sel:
 				sel.remove(values['ComboZ'])

@@ -8,6 +8,10 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.font_manager as fm
 import japanize_matplotlib
 
+import pandas as pd
+
+import seaborn as sns
+
 from . import ReturnInfo as ri
 
 
@@ -36,11 +40,12 @@ def meaningCov(rho):
 
 def plotResiduals(inputData):
 	(residuals, model, d) = inputData[0]
-	(count, variable, data) = d
+	(count, variable, data, a, name, alpha) = d
 	sg.theme('Dark Brown')
 
 	#Chi-square
 	ydata = data[-1]
+	xdata = data[:-1]
 	chi2 = stats.chisquare(ydata, f_exp = model)
 	
 	#Coefficient of determination
@@ -60,7 +65,12 @@ def plotResiduals(inputData):
 	corrcoef = np.corrcoef(mcc_data)
 	mcc = corrcoef[0][1]
 	meaning = meaningCov(mcc)
-
+	
+	#Multicollinearity
+	m_mcc = np.corrcoef(xdata)
+	inv_m_mcc = np.linalg.inv(m_mcc)
+	vif = pd.Series(np.diag(inv_m_mcc), index=name[:-1])
+	
 	#https://rikei-logistics.com/excel-regression
 	column1 = sg.Column(
 		[
@@ -101,14 +111,83 @@ def plotResiduals(inputData):
 		]
 	)
 	
+	column5 = sg.Column(
+		[[sg.Text(key), sg.InputText(f'{val}', readonly=True)] for key, val in vif.to_dict().items()]
+	)
+	
+	if (variable > 1):
+		table3_index = ['Variables', 'Partial regression coefficient', 'Standardized partial regression coefficient']
+		index_list = name[:-1]
+		index_list.append('constant')
+		var3 = []
+		for index, av, alphav in zip(index_list, a, alpha):
+			var3.append([index, av, alphav])
+	
+	table4_index = ['Residuals', 'Absolute Residuals', 'Relative Residuals']
+	absresiduals = np.abs(residuals)
+	reresiduals = residuals / model
+	var4 = []
+	for residual, absresidual, reresidual in zip(residuals, absresiduals, reresiduals):
+		var4.append([residual, absresidual, reresidual])
+	
+	FrameMax = sg.Frame( 'Max', 
+		[
+			[sg.Text('Residuals'), sg.InputText(f'{np.max(residuals)}', readonly=True)],
+			[sg.Text('Absolute Residuals'), sg.InputText(f'{np.max(absresiduals)}', readonly=True)],
+			[sg.Text('Relative Residuals'), sg.InputText(f'{np.max(reresiduals)}', readonly=True)],
+		]
+	)
+	FrameMin = sg.Frame( 'Min', 
+		[
+			[sg.Text('Residuals'), sg.InputText(f'{np.min(residuals)}', readonly=True)],
+			[sg.Text('Absolute Residuals'), sg.InputText(f'{np.min(absresiduals)}', readonly=True)],
+			[sg.Text('Relative Residuals'), sg.InputText(f'{np.min(reresiduals)}', readonly=True)],
+		]
+	)
+	residualsQ = np.quantile(a=residuals, q=np.array([0.25, 0.5, 0.75]))
+	absresidualsQ = np.quantile(a=absresiduals, q=np.array([0.25, 0.5, 0.75]))
+	reresidualsQ = np.quantile(a=reresiduals, q=np.array([0.25, 0.5, 0.75]))
+	FrameQ1 = sg.Frame( 'Q1', 
+		[
+			[sg.Text('Residuals'), sg.InputText(f'{residualsQ[0]}', readonly=True)],
+			[sg.Text('Absolute Residuals'), sg.InputText(f'{absresidualsQ[0]}', readonly=True)],
+			[sg.Text('Relative Residuals'), sg.InputText(f'{reresidualsQ[0]}', readonly=True)],
+		]
+	)
+	FrameQ2 = sg.Frame( 'Q2', 
+		[
+			[sg.Text('Residuals'), sg.InputText(f'{residualsQ[1]}', readonly=True)],
+			[sg.Text('Absolute Residuals'), sg.InputText(f'{absresidualsQ[1]}', readonly=True)],
+			[sg.Text('Relative Residuals'), sg.InputText(f'{reresidualsQ[1]}', readonly=True)],
+		]
+	)
+	FrameQ3 = sg.Frame( 'Q3', 
+		[
+			[sg.Text('Residuals'), sg.InputText(f'{residualsQ[2]}', readonly=True)],
+			[sg.Text('Absolute Residuals'), sg.InputText(f'{absresidualsQ[2]}', readonly=True)],
+			[sg.Text('Relative Residuals'), sg.InputText(f'{reresidualsQ[2]}', readonly=True)],
+		]
+	)
+	column4 = sg.Column(
+		[
+			[FrameMax], [FrameQ3], [FrameQ2], [FrameQ1], [FrameMin],
+			[sg.Text('Variance of residuals'), sg.InputText(f'{vResiduals}', readonly=True)],
+			[sg.Text('Standard error of residuals'), sg.InputText(f'{seResiduals}', readonly=True)],
+		]
+	)
+	
 	t1 = sg.Tab('Scatter plot' ,[[column1, sg.Canvas(key='CANVAS_S', size=(640, 480))]])
 	t2 = sg.Tab('Probability plot' ,[[column2, sg.Canvas(key='CANVAS_P', size=(640, 480))]])
-	# 標準偏回帰係数
-	# 絶対残差/相対残差
+	t4 = sg.Tab('Residuals', [[ column4, sg.Table(var4, headings=table4_index) ]])
+	if (variable > 1):
+		t3 = sg.Tab('Partial regression coefficient' ,[[sg.Table(var3, headings=table3_index)]])
+		t5 = sg.Tab('Multicollinearity' ,[[column5, sg.Canvas(key='CANVAS_M', size=(640, 480))]])
+		tab = [t1 ,t2, t3, t4, t5]
+	else:
+		tab = [t1 ,t2, t4]
 
 	layout = [
-		[sg.TabGroup ([[t1 ,t2]])],
-		[sg.Button("Back"), sg.Button('Exit')]
+		[sg.TabGroup ([tab])], [sg.Button("Back"), sg.Button('Exit')]
 	]
 	
 	win_location = (0, 0)
@@ -134,6 +213,13 @@ def plotResiduals(inputData):
 	ax2.set_title("Probability plot of Residuals (Normal distribution)")
 	ax2.grid(True)
 	
+	if (variable > 1):
+		fig5 = plt.Figure()
+		ax5 = fig5.add_subplot(111)
+		sns.heatmap(m_mcc, linewidths=0.5, cmap='coolwarm', annot=True, ax=ax5, vmin=-1, vmax=1, xticklabels=name[:-1], yticklabels=name[:-1])
+		ax5.set_title("Heatmap")
+		fig_agg5 = draw_figure(window['CANVAS_M'].TKCanvas, fig5)
+		
 	fig_agg1 = draw_figure(window['CANVAS_S'].TKCanvas, fig1)
 	fig_agg2 = draw_figure(window['CANVAS_P'].TKCanvas, fig2)
 	
