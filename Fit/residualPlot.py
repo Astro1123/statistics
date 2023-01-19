@@ -68,8 +68,9 @@ def plotResiduals(inputData):
 	
 	#Multicollinearity
 	m_mcc = np.corrcoef(xdata)
-	inv_m_mcc = np.linalg.inv(m_mcc)
-	vif = pd.Series(np.diag(inv_m_mcc), index=name[:-1])
+	if (variable > 1):
+		inv_m_mcc = np.linalg.inv(m_mcc)
+		vif = pd.Series(np.diag(inv_m_mcc), index=name[:-1])
 	
 	#https://rikei-logistics.com/excel-regression
 	column1 = sg.Column(
@@ -111,9 +112,10 @@ def plotResiduals(inputData):
 		]
 	)
 	
-	column5 = sg.Column(
-		[[sg.Text(key), sg.InputText(f'{val}', readonly=True)] for key, val in vif.to_dict().items()]
-	)
+	if (variable > 1):
+		column5 = sg.Column(
+			[[sg.Text(key), sg.InputText(f'{val}', readonly=True)] for key, val in vif.to_dict().items()]
+		)
 	
 	if (variable > 1):
 		table3_index = ['Variables', 'Partial regression coefficient', 'Standardized partial regression coefficient']
@@ -124,11 +126,16 @@ def plotResiduals(inputData):
 			var3.append([index, av, alphav])
 	
 	table4_index = ['Residuals', 'Absolute Residuals', 'Relative Residuals']
+	table4_index.extend(name)
+	table4_index.append('Model')
 	absresiduals = np.abs(residuals)
 	reresiduals = residuals / model
 	var4 = []
-	for residual, absresidual, reresidual in zip(residuals, absresiduals, reresiduals):
-		var4.append([residual, absresidual, reresidual])
+	for residual, absresidual, reresidual, d, m in zip(residuals, absresiduals, reresiduals, data.T, model):
+		var4_list = [residual, absresidual, reresidual]
+		var4_list.extend(d)
+		var4_list.append(m)
+		var4.append(var4_list)
 	
 	FrameMax = sg.Frame( 'Max', 
 		[
