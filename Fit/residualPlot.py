@@ -3,6 +3,7 @@ import PySimpleGUI as sg
 import math
 
 from scipy import stats
+
 import numpy as np
 import pandas as pd
 
@@ -16,28 +17,6 @@ import seaborn as sns
 from . import ReturnInfo as ri
 
 
-def meaningCov(rho):
-	if (rho >= 0.7):
-		return "Very strong positive relationship"
-	elif (rho >= 0.4):
-		return "Strong positive relationship"
-	elif (rho >= 0.3):
-		return "Moderate positive relationship"
-	elif (rho >= 0.2):
-		return "Weak positive relationship"
-	elif (rho > 0):
-		return "No or negligible relationship"
-	elif (rho <= 0.7):
-		return "Very strong negative relationship"
-	elif (rho <= 0.4):
-		return "Strong negative relationship"
-	elif (rho <= 0.3):
-		return "Moderate negative relationship"
-	elif (rho <= 0.2):
-		return "Weak negative relationship"
-	elif (rho < 0):
-		return "No or negligible relationship"
-	return "No relationship [zero correlation]"
 
 def plotResiduals(inputData):
 	(residuals, model, d) = inputData[0]
@@ -49,16 +28,18 @@ def plotResiduals(inputData):
 	xdata = data[:-1]
 	chi2 = stats.chisquare(ydata, f_exp = model)
 	
+	freedom = count - variable - 1
+	
 	#Coefficient of determination
 	rss = np.sum(residuals**2)
 	tss = np.sum((ydata-np.mean(ydata))**2)
 	r_squared = 1 - (rss / tss)
-	adj_r_squared = 1 - ((rss / (count - variable - 1)) / (tss / (count - 1)))
+	adj_r_squared = 1 - ((rss / freedom) / (tss / (count - 1)))
 	
 	mae = np.sum(np.abs(residuals)) / count
 	mse = tss / count
 	rmse = np.sqrt(mse)
-	vResiduals = rss / (count - variable - 1)
+	vResiduals = rss / freedom
 	seResiduals = np.sqrt(vResiduals)
 
 	#Multiple correlation coefficient
@@ -105,6 +86,75 @@ def plotResiduals(inputData):
 	stderr_coef = SE[:-1]
 	stderr_cnst = SE[-1][0,0]
 	
+	inputData = (chi2, rss, mse, rmse, mae, aic, vResiduals, seResiduals, r_squared, adj_r_squared, mcc, model, residuals)
+	(widget, fig1) = showScatterPlot(inputData)
+	t1 = sg.Tab('Scatter plot' ,widget)
+	inputData = (name, stderr_coef, stderr_cnst, a, freedom, model, residuals, variable)
+	t2 = sg.Tab('Statistical significance' ,showStatisticalSignificance(inputData))
+	inputData = (residuals, ydata)
+	(widget, fig3) = showProbabilityPlot(inputData)
+	t3 = sg.Tab('Probability plot' ,widget)
+	inputData = (name, residuals, model, data, vResiduals, seResiduals)
+	t5 = sg.Tab('Residuals', showResiduals(inputData))
+	inputData = (count, variable, freedom)
+	t0 = sg.Tab('Statistics', showStatistics(inputData))
+	if (variable > 1):
+		inputData = (name, a, alpha)
+		t4 = sg.Tab('Partial regression coefficient' ,showPRC(inputData))
+		inputData = (vif, m_mcc, name)
+		(widget, fig6) = showMulticollinearity(inputData)
+		t6 = sg.Tab('Multicollinearity' ,widget)
+		tab = [[t1, t2, t3, t4, t5, t6, t0]]
+	else:
+		tab = [[t1, t2, t3, t5, t0]]
+
+	layout = [
+		[sg.TabGroup(tab)], [sg.Button("Back"), sg.Button('Exit')]
+	]
+	
+	win_location = (0, 0)
+	
+	window = sg.Window('Title', layout, finalize=True, location=win_location)
+	
+	fig_agg1 = draw_figure(window['CANVAS_S'].TKCanvas, fig1)
+	fig_agg3 = draw_figure(window['CANVAS_P'].TKCanvas, fig3)
+	if (variable > 1):
+		fig_agg6 = draw_figure(window['CANVAS_M'].TKCanvas, fig6)
+	
+	while True:
+		event, values = window.read()
+		
+		if event in (sg.WIN_CLOSED, 'Back'):
+			res = ri.BackCmd()
+			break
+		elif event == 'Exit':
+			res = ri.QuitCmd()
+			break
+
+	window.close()
+	return res
+
+
+
+
+def showStatistics(inputData):
+	(count, variable, freedom) = inputData
+	column0a = sg.Column(
+		[
+			[]
+		]
+	)
+	column0b = sg.Column(
+		[
+			[sg.Text('Number of Data'), sg.InputText(f'{count}', readonly=True)],
+			[sg.Text('Number of Parameter'), sg.InputText(f'{variable}', readonly=True)],
+			[sg.Text('Degree of Freedom'), sg.InputText(f'{freedom}', readonly=True)],
+		]
+	)
+	return [[column0a, column0b]]
+
+def showScatterPlot(inputData):
+	(chi2, rss, mse, rmse, mae, aic, vResiduals, seResiduals, r_squared, adj_r_squared, mcc, model, residuals) = inputData
 	#https://rikei-logistics.com/excel-regression
 	column1 = sg.Column(
 		[
@@ -117,14 +167,71 @@ def plotResiduals(inputData):
 			[sg.Text('AIC (normal distribution)'), sg.InputText(f'{aic}', readonly=True)],
 			[sg.Text('Variance of residuals'), sg.InputText(f'{vResiduals}', readonly=True)],
 			[sg.Text('Standard error of residuals'), sg.InputText(f'{seResiduals}', readonly=True)],
-			[sg.Text('Standard error of coefficient'), sg.InputText(f'{stderr_coef}', readonly=True)],
-			[sg.Text('Standard error of constant'), sg.InputText(f'{stderr_cnst}', readonly=True)],
 			[sg.Text('Coefficient of determination'), sg.InputText(f'{r_squared}', readonly=True)],
 			[sg.Text('Adjusted coefficient of determination'), sg.InputText(f'{adj_r_squared}', readonly=True)],
 			[sg.Text('Multiple correlation coefficient'), sg.InputText(f'{mcc}', readonly=True)],
 		]
 	)
+
+	x_latent = np.linspace(min(model), max(model), 100)
+	ideal = np.linspace(0, 0, 100)
 	
+	fig1 = plt.Figure()
+	ax1 = fig1.add_subplot(111)
+	ax1.scatter(model, residuals)
+	ax1.set_title(f"Residual plot")
+	ax1.set_xlabel("Fitted values")
+	ax1.set_ylabel("Residual")
+	ax1.plot(x_latent, ideal, c="red")
+	ax1.grid(True)
+	
+	return ([[column1, sg.Canvas(key='CANVAS_S', size=(640, 480))]], fig1)
+
+def showStatisticalSignificance(inputData):
+	(name, stderr_coef, stderr_cnst, a, freedom, model, residuals, variable) = inputData
+	table2_index = ['Variables', 'Coefficient', 'Standard error', 't-value', 'p-value', 'Lower limit (95%)', 'Upper limit (95%)']
+	variables = name[:-1]
+	variables.append('Constant')
+	stderr_all_tmp = stderr_coef
+	stderr_all_tmp.append(stderr_cnst)
+	stderr_all = np.array(stderr_all_tmp)
+	stderr_tValues = a / stderr_all
+	stderr_pValues = stats.t.sf(x=np.abs(stderr_tValues), df=freedom) * 2
+	(low, high) = stats.t.interval(alpha=0.95, df=freedom)
+	lowerLimits = a - stderr_all * low
+	upperLimits = a + stderr_all * high
+	var2 = []
+	for variablev, av, stderr, stderr_tValue, stderr_pValue, l, u in zip(variables, a, stderr_all, stderr_tValues, stderr_pValues, lowerLimits, upperLimits):
+		var2_list = [variablev, av, stderr, stderr_tValue, stderr_pValue, l, u]
+		var2.append(var2_list)
+	
+	table_index = ['', 'Degree of freedom', 'SS', 'MS', 'F', 'Significance']
+	regave = np.average(model)
+	resave = np.average(residuals)
+	col = ['Regression', 'Residual']
+	df = [variable, freedom]
+	SS = [np.sum((model - regave)**2), np.sum((residuals - resave)**2)]
+	MS = [SS[0] / df[0], SS[1] / df[1]]
+	F = MS[0] / MS[1]
+	p = stats.f.sf(F, df[0], df[1])
+	var = []
+	var.append([col[0], df[0], SS[0], MS[0], F, p])
+	var.append([col[1], df[1], SS[1], MS[1]])
+	column2 = sg.Column(
+		[
+			[]
+		]
+	)
+	columnG = sg.Column(
+		[
+			[sg.Table(var2, headings=table2_index)],
+			[sg.Table(var, headings=table_index)],
+		]
+	)
+	return [[column2, columnG]]
+
+def showProbabilityPlot(inputData):
+	(residuals, ydata) = inputData
 	result1 = stats.shapiro(residuals)
 	result2 = stats.ks_1samp(residuals, stats.norm.cdf)
 	
@@ -148,20 +255,27 @@ def plotResiduals(inputData):
 		]
 	)
 	
-	if (variable > 1):
-		column6 = sg.Column(
-			[[sg.Text(key), sg.InputText(f'{val}', readonly=True)] for key, val in vif.to_dict().items()]
-		)
+	fig3 = plt.Figure()
+	ax3 = fig3.add_subplot(111)
+	stats.probplot(ydata, dist="norm", plot=ax3)
+	ax3.set_title("Probability plot of Residuals (Normal distribution)")
+	ax3.grid(True)
 	
-	if (variable > 1):
-		table4_index = ['Variables', 'Partial regression coefficient', 'Standardized partial regression coefficient']
-		index_list = name[:-1]
-		index_list.append('constant')
-		var4 = []
-		for index, av, alphav in zip(index_list, a, alpha):
-			var4.append([index, av, alphav])
-	
-	table5_index = ['Residuals', 'Absolute Residuals', 'Relative Residuals']
+	return ([[column3, sg.Canvas(key='CANVAS_P', size=(640, 480))]], fig3)
+
+def showPRC(inputData):
+	(name, a, alpha) = inputData
+	table4_index = ['Variables', 'Partial regression coefficient', 'Standardized partial regression coefficient']
+	index_list = name[:-1]
+	index_list.append('constant')
+	var4 = []
+	for index, av, alphav in zip(index_list, a, alpha):
+		var4.append([index, av, alphav])
+	return [[sg.Table(var4, headings=table4_index)]]
+
+def showResiduals(inputData):
+	(name, residuals, model, data, vResiduals, seResiduals) = inputData
+	table5_index = ['Residuals', 'Absolute Residuals', 'Relative Residuals', 'Standard Residuals']
 	table5_index.extend(name)
 	table5_index.append('Model')
 	absresiduals = np.abs(residuals)
@@ -169,6 +283,7 @@ def plotResiduals(inputData):
 	var5 = []
 	for residual, absresidual, reresidual, d, m in zip(residuals, absresiduals, reresiduals, data.T, model):
 		var5_list = [residual, absresidual, reresidual]
+		var5_list.append(residual / seResiduals)
 		var5_list.extend(d)
 		var5_list.append(m)
 		var5.append(var5_list)
@@ -218,66 +333,20 @@ def plotResiduals(inputData):
 			[sg.Text('Standard error of residuals'), sg.InputText(f'{seResiduals}', readonly=True)],
 		]
 	)
-	
-	t1 = sg.Tab('Scatter plot' ,[[column1, sg.Canvas(key='CANVAS_S', size=(640, 480))]])
-	t3 = sg.Tab('Probability plot' ,[[column3, sg.Canvas(key='CANVAS_P', size=(640, 480))]])
-	t5 = sg.Tab('Residuals', [[ column5, sg.Table(var5, headings=table5_index) ]])
-	if (variable > 1):
-		t4 = sg.Tab('Partial regression coefficient' ,[[sg.Table(var4, headings=table4_index)]])
-		t6 = sg.Tab('Multicollinearity' ,[[column6, sg.Canvas(key='CANVAS_M', size=(640, 480))]])
-		tab = [t1 ,t3, t4, t5, t6]
-	else:
-		tab = [t1 ,t3, t5]
+	return [[column5, sg.Table(var5, headings=table5_index)]]
 
-	layout = [
-		[sg.TabGroup ([tab])], [sg.Button("Back"), sg.Button('Exit')]
-	]
+def showMulticollinearity(inputData):
+	(vif, m_mcc, name) = inputData
+	column6 = sg.Column(
+		[[sg.Text(key), sg.InputText(f'{val}', readonly=True)] for key, val in vif.to_dict().items()]
+	)
+	fig6 = plt.Figure()
+	ax6 = fig6.add_subplot(111)
+	sns.heatmap(m_mcc, linewidths=0.5, cmap='coolwarm', annot=True, ax=ax6, vmin=-1, vmax=1, xticklabels=name[:-1], yticklabels=name[:-1])
+	ax6.set_title("Heatmap")
+	return ([[column6, sg.Canvas(key='CANVAS_M', size=(640, 480))]], fig6)
 	
-	win_location = (0, 0)
-	
-	window = sg.Window('Title', layout, finalize=True, location=win_location)
 
-	x_latent = np.linspace(min(model), max(model), 100)
-	ideal = np.linspace(0, 0, 100)
-	
-	#Graphs
-	fig1 = plt.Figure()
-	ax1 = fig1.add_subplot(111)
-	ax1.scatter(model, residuals)
-	ax1.set_title(f"Residual plot")
-	ax1.set_xlabel("Fitted values")
-	ax1.set_ylabel("Residual")
-	ax1.plot(x_latent, ideal, c="red")
-	ax1.grid(True)
-	
-	fig3 = plt.Figure()
-	ax3 = fig3.add_subplot(111)
-	stats.probplot(ydata, dist="norm", plot=ax3)
-	ax3.set_title("Probability plot of Residuals (Normal distribution)")
-	ax3.grid(True)
-	
-	if (variable > 1):
-		fig6 = plt.Figure()
-		ax6 = fig6.add_subplot(111)
-		sns.heatmap(m_mcc, linewidths=0.5, cmap='coolwarm', annot=True, ax=ax6, vmin=-1, vmax=1, xticklabels=name[:-1], yticklabels=name[:-1])
-		ax6.set_title("Heatmap")
-		fig_agg6 = draw_figure(window['CANVAS_M'].TKCanvas, fig6)
-		
-	fig_agg1 = draw_figure(window['CANVAS_S'].TKCanvas, fig1)
-	fig_agg3 = draw_figure(window['CANVAS_P'].TKCanvas, fig3)
-	
-	while True:
-		event, values = window.read()
-		
-		if event in (sg.WIN_CLOSED, 'Back'):
-			res = ri.BackCmd()
-			break
-		elif event == 'Exit':
-			res = ri.QuitCmd()
-			break
-
-	window.close()
-	return res
 
 
 
@@ -286,3 +355,26 @@ def draw_figure(canvas, figure):
 	figure_canvas_agg.draw()
 	figure_canvas_agg.get_tk_widget().pack(side='top', fill='both', expand=1)
 	return figure_canvas_agg
+
+def meaningCov(rho):
+	if (rho >= 0.7):
+		return "Very strong positive relationship"
+	elif (rho >= 0.4):
+		return "Strong positive relationship"
+	elif (rho >= 0.3):
+		return "Moderate positive relationship"
+	elif (rho >= 0.2):
+		return "Weak positive relationship"
+	elif (rho > 0):
+		return "No or negligible relationship"
+	elif (rho <= 0.7):
+		return "Very strong negative relationship"
+	elif (rho <= 0.4):
+		return "Strong negative relationship"
+	elif (rho <= 0.3):
+		return "Moderate negative relationship"
+	elif (rho <= 0.2):
+		return "Weak negative relationship"
+	elif (rho < 0):
+		return "No or negligible relationship"
+	return "No relationship [zero correlation]"
