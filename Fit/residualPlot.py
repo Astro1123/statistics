@@ -1,14 +1,15 @@
 import PySimpleGUI as sg
 
+import math
+
 from scipy import stats
 import numpy as np
+import pandas as pd
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.font_manager as fm
 import japanize_matplotlib
-
-import pandas as pd
 
 import seaborn as sns
 
@@ -72,6 +73,38 @@ def plotResiduals(inputData):
 		inv_m_mcc = np.linalg.inv(m_mcc)
 		vif = pd.Series(np.diag(inv_m_mcc), index=name[:-1])
 	
+	aic = count * ( np.log(math.pi * 2) + np.log(mse) + 1 ) + 2 * ( variable + 2 )
+	
+	#Standard error of coefficients
+	deviation_list = []
+	mean_list = []
+	for i in range(len(xdata)):
+		tmp = np.mean(xdata[i])
+		mean_list.append(tmp)
+		deviation_list.append( [ x - tmp for x in xdata[i] ] )
+	deviation = np.array(deviation_list)
+	S_list = []
+	for i in range(len(xdata)):
+		S_list_sub = []
+		for j in range(len(xdata)):
+			tmp = np.sum(deviation[i] * deviation[j])
+			S_list_sub.append(tmp)
+		S_list.append(S_list_sub)
+	S_mat = np.matrix(S_list)
+	S_inv_mat = np.linalg.inv(S_mat)
+	x_average = np.matrix(mean_list)
+	SE = []
+	for i in range(len(xdata)):
+		SE.append(np.sqrt(vResiduals * S_inv_mat[i, i]))
+	sum_tmp = 0
+	for i in range(len(xdata)):
+		for j in range(len(xdata)):
+			sum_tmp += x_average * S_inv_mat * x_average.T
+	SE.append( np.sqrt( vResiduals * ( 1 / count + sum_tmp ) ) )
+	
+	stderr_coef = SE[:-1]
+	stderr_cnst = SE[-1][0,0]
+	
 	#https://rikei-logistics.com/excel-regression
 	column1 = sg.Column(
 		[
@@ -81,8 +114,11 @@ def plotResiduals(inputData):
 			[sg.Text('MSE'), sg.InputText(f'{mse}', readonly=True)],
 			[sg.Text('RMSE'), sg.InputText(f'{rmse}', readonly=True)],
 			[sg.Text('MAE'), sg.InputText(f'{mae}', readonly=True)],
+			[sg.Text('AIC (normal distribution)'), sg.InputText(f'{aic}', readonly=True)],
 			[sg.Text('Variance of residuals'), sg.InputText(f'{vResiduals}', readonly=True)],
 			[sg.Text('Standard error of residuals'), sg.InputText(f'{seResiduals}', readonly=True)],
+			[sg.Text('Standard error of coefficient'), sg.InputText(f'{stderr_coef}', readonly=True)],
+			[sg.Text('Standard error of constant'), sg.InputText(f'{stderr_cnst}', readonly=True)],
 			[sg.Text('Coefficient of determination'), sg.InputText(f'{r_squared}', readonly=True)],
 			[sg.Text('Adjusted coefficient of determination'), sg.InputText(f'{adj_r_squared}', readonly=True)],
 			[sg.Text('Multiple correlation coefficient'), sg.InputText(f'{mcc}', readonly=True)],
@@ -105,7 +141,7 @@ def plotResiduals(inputData):
 		]
 	)
 	
-	column2 = sg.Column(
+	column3 = sg.Column(
 		[
 			[FrameSW],
 			[FrameKS],
@@ -113,29 +149,29 @@ def plotResiduals(inputData):
 	)
 	
 	if (variable > 1):
-		column5 = sg.Column(
+		column6 = sg.Column(
 			[[sg.Text(key), sg.InputText(f'{val}', readonly=True)] for key, val in vif.to_dict().items()]
 		)
 	
 	if (variable > 1):
-		table3_index = ['Variables', 'Partial regression coefficient', 'Standardized partial regression coefficient']
+		table4_index = ['Variables', 'Partial regression coefficient', 'Standardized partial regression coefficient']
 		index_list = name[:-1]
 		index_list.append('constant')
-		var3 = []
+		var4 = []
 		for index, av, alphav in zip(index_list, a, alpha):
-			var3.append([index, av, alphav])
+			var4.append([index, av, alphav])
 	
-	table4_index = ['Residuals', 'Absolute Residuals', 'Relative Residuals']
-	table4_index.extend(name)
-	table4_index.append('Model')
+	table5_index = ['Residuals', 'Absolute Residuals', 'Relative Residuals']
+	table5_index.extend(name)
+	table5_index.append('Model')
 	absresiduals = np.abs(residuals)
 	reresiduals = residuals / model
-	var4 = []
+	var5 = []
 	for residual, absresidual, reresidual, d, m in zip(residuals, absresiduals, reresiduals, data.T, model):
-		var4_list = [residual, absresidual, reresidual]
-		var4_list.extend(d)
-		var4_list.append(m)
-		var4.append(var4_list)
+		var5_list = [residual, absresidual, reresidual]
+		var5_list.extend(d)
+		var5_list.append(m)
+		var5.append(var5_list)
 	
 	FrameMax = sg.Frame( 'Max', 
 		[
@@ -175,7 +211,7 @@ def plotResiduals(inputData):
 			[sg.Text('Relative Residuals'), sg.InputText(f'{reresidualsQ[2]}', readonly=True)],
 		]
 	)
-	column4 = sg.Column(
+	column5 = sg.Column(
 		[
 			[FrameMax], [FrameQ3], [FrameQ2], [FrameQ1], [FrameMin],
 			[sg.Text('Variance of residuals'), sg.InputText(f'{vResiduals}', readonly=True)],
@@ -184,14 +220,14 @@ def plotResiduals(inputData):
 	)
 	
 	t1 = sg.Tab('Scatter plot' ,[[column1, sg.Canvas(key='CANVAS_S', size=(640, 480))]])
-	t2 = sg.Tab('Probability plot' ,[[column2, sg.Canvas(key='CANVAS_P', size=(640, 480))]])
-	t4 = sg.Tab('Residuals', [[ column4, sg.Table(var4, headings=table4_index) ]])
+	t3 = sg.Tab('Probability plot' ,[[column3, sg.Canvas(key='CANVAS_P', size=(640, 480))]])
+	t5 = sg.Tab('Residuals', [[ column5, sg.Table(var5, headings=table5_index) ]])
 	if (variable > 1):
-		t3 = sg.Tab('Partial regression coefficient' ,[[sg.Table(var3, headings=table3_index)]])
-		t5 = sg.Tab('Multicollinearity' ,[[column5, sg.Canvas(key='CANVAS_M', size=(640, 480))]])
-		tab = [t1 ,t2, t3, t4, t5]
+		t4 = sg.Tab('Partial regression coefficient' ,[[sg.Table(var4, headings=table4_index)]])
+		t6 = sg.Tab('Multicollinearity' ,[[column6, sg.Canvas(key='CANVAS_M', size=(640, 480))]])
+		tab = [t1 ,t3, t4, t5, t6]
 	else:
-		tab = [t1 ,t2, t4]
+		tab = [t1 ,t3, t5]
 
 	layout = [
 		[sg.TabGroup ([tab])], [sg.Button("Back"), sg.Button('Exit')]
@@ -214,21 +250,21 @@ def plotResiduals(inputData):
 	ax1.plot(x_latent, ideal, c="red")
 	ax1.grid(True)
 	
-	fig2 = plt.Figure()
-	ax2 = fig2.add_subplot(111)
-	stats.probplot(ydata, dist="norm", plot=ax2)
-	ax2.set_title("Probability plot of Residuals (Normal distribution)")
-	ax2.grid(True)
+	fig3 = plt.Figure()
+	ax3 = fig3.add_subplot(111)
+	stats.probplot(ydata, dist="norm", plot=ax3)
+	ax3.set_title("Probability plot of Residuals (Normal distribution)")
+	ax3.grid(True)
 	
 	if (variable > 1):
-		fig5 = plt.Figure()
-		ax5 = fig5.add_subplot(111)
-		sns.heatmap(m_mcc, linewidths=0.5, cmap='coolwarm', annot=True, ax=ax5, vmin=-1, vmax=1, xticklabels=name[:-1], yticklabels=name[:-1])
-		ax5.set_title("Heatmap")
-		fig_agg5 = draw_figure(window['CANVAS_M'].TKCanvas, fig5)
+		fig6 = plt.Figure()
+		ax6 = fig6.add_subplot(111)
+		sns.heatmap(m_mcc, linewidths=0.5, cmap='coolwarm', annot=True, ax=ax6, vmin=-1, vmax=1, xticklabels=name[:-1], yticklabels=name[:-1])
+		ax6.set_title("Heatmap")
+		fig_agg6 = draw_figure(window['CANVAS_M'].TKCanvas, fig6)
 		
 	fig_agg1 = draw_figure(window['CANVAS_S'].TKCanvas, fig1)
-	fig_agg2 = draw_figure(window['CANVAS_P'].TKCanvas, fig2)
+	fig_agg3 = draw_figure(window['CANVAS_P'].TKCanvas, fig3)
 	
 	while True:
 		event, values = window.read()
