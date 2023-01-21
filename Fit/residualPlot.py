@@ -182,13 +182,18 @@ def plotResiduals(inputData):
 			elif values['Comboc2'] == '99%':
 				pc = 99
 			elif values['Comboc2'] == '1σ':
-				pc = stats.norm.cdf(x=1) - stats.norm.cdf(x=-1)
-				print(pc)
+				pc = (stats.norm.cdf(x=1) - stats.norm.cdf(x=-1)) * 100
+			elif values['Comboc2'] == '2σ':
+				pc = (stats.norm.cdf(x=2) - stats.norm.cdf(x=-2)) * 100
+			elif values['Comboc2'] == '3σ':
+				pc = (stats.norm.cdf(x=3) - stats.norm.cdf(x=-3)) * 100
 			else:
 				pc = 95
 			inputData = (name, stderr_coef, stderr_cnst, a, freedom, pc)
-			window['Tablec2a'].update(values=updateTableC2(inputData))
-
+			(data, idx) = updateTableC2(inputData)
+			window['Tablec2a'].update(values=data)
+			window['Textc2'].update(f'Confidence interval : {pc}%')
+			
 	window.close()
 	return res
 
@@ -235,7 +240,7 @@ def updateTableC2(inputData):
 	for variablev, av, stderr, stderr_tValue, stderr_pValue, l, u in zip(variables, a, stderr_all, stderr_tValues, stderr_pValues, lowerLimits, upperLimits):
 		var2_list = [variablev, av, stderr, stderr_tValue, stderr_pValue, l, u]
 		var2.append(var2_list)
-	return var2
+	return (var2, table2_index)
 
 
 
@@ -290,7 +295,7 @@ def showScatterPlot(inputData):
 
 def showStatisticalSignificance(inputData):
 	(name, stderr_coef, stderr_cnst, a, freedom, model, residuals, variable) = inputData
-	table2_index = ['Variables', 'Coefficient', 'Standard error', 't-value', 'p-value', 'Lower limit (95%)', 'Upper limit (95%)']
+	table2_index = ['Variables', 'Coefficient', 'Standard error', 't-value', 'p-value', 'Lower limit', 'Upper limit']
 	variables = name[:-1]
 	variables.append('Constant')
 	stderr_all_tmp = copy.copy(stderr_coef)
@@ -326,6 +331,7 @@ def showStatisticalSignificance(inputData):
 	parcent = ['90%', '95%', '99%', '1σ', '2σ', '3σ']
 	columnG = sg.Column(
 		[
+			[sg.Text('Confidence interval : 95%', key='Textc2')],
 			[sg.Table(var2, headings=table2_index, key='Tablec2a')],
 			[sg.Table(var, headings=table_index)],
 			[sg.Button('Update', key='Updatec2'), sg.Combo(parcent, key='Comboc2', readonly=True, default_value='95%')]
