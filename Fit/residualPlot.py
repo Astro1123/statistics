@@ -181,6 +181,9 @@ def plotResiduals(inputData):
 				pc = 90
 			elif values['Comboc2'] == '99%':
 				pc = 99
+			elif values['Comboc2'] == '1σ':
+				pc = stats.norm.cdf(x=1) - stats.norm.cdf(x=-1)
+				print(pc)
 			else:
 				pc = 95
 			inputData = (name, stderr_coef, stderr_cnst, a, freedom, pc)
@@ -320,7 +323,7 @@ def showStatisticalSignificance(inputData):
 			[]
 		]
 	)
-	parcent = ['90%', '95%', '99%']
+	parcent = ['90%', '95%', '99%', '1σ', '2σ', '3σ']
 	columnG = sg.Column(
 		[
 			[sg.Table(var2, headings=table2_index, key='Tablec2a')],
