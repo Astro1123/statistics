@@ -1,6 +1,7 @@
 import PySimpleGUI as sg
 
 import math
+import copy
 
 from scipy import stats
 
@@ -95,7 +96,8 @@ def plotResiduals(inputData):
 	(widget, fig3) = showProbabilityPlot(inputData)
 	t3 = sg.Tab('Probability plot' ,widget)
 	inputData = (name, residuals, model, data, vResiduals, seResiduals)
-	t5 = sg.Tab('Residuals', showResiduals(inputData))
+	(widget, fig5, df5) = showResiduals(inputData)
+	t5 = sg.Tab('Residuals', widget)
 	inputData = (count, variable, freedom)
 	t0 = sg.Tab('Statistics', showStatistics(inputData))
 	if (variable > 1):
@@ -118,6 +120,7 @@ def plotResiduals(inputData):
 	
 	fig_agg1 = draw_figure(window['CANVAS_S'].TKCanvas, fig1)
 	fig_agg3 = draw_figure(window['CANVAS_P'].TKCanvas, fig3)
+	fig_agg3 = draw_figure(window['CANVAS_R'].TKCanvas, fig5)
 	if (variable > 1):
 		fig_agg6 = draw_figure(window['CANVAS_M'].TKCanvas, fig6)
 	
@@ -130,6 +133,16 @@ def plotResiduals(inputData):
 		elif event == 'Exit':
 			res = ri.QuitCmd()
 			break
+		elif event == 'Ascc5':
+			if values['Comboc5'] == 'Default':
+				window['Tablec5'].update(values=df5.values.tolist())
+			else:
+				window['Tablec5'].update(values=df5.sort_values(values['Comboc5']).values.tolist())
+		elif event == 'Descc5':
+			if values['Comboc5'] == 'Default':
+				window['Tablec5'].update(values=df5.values.tolist())
+			else:
+				window['Tablec5'].update(values=df5.sort_values(values['Comboc5'], ascending=False).values.tolist())
 
 	window.close()
 	return res
@@ -198,7 +211,7 @@ def showStatisticalSignificance(inputData):
 	stderr_tValues = a / stderr_all
 	stderr_pValues = stats.t.sf(x=np.abs(stderr_tValues), df=freedom) * 2
 	(low, high) = stats.t.interval(alpha=0.95, df=freedom)
-	lowerLimits = a - stderr_all * low
+	lowerLimits = a + stderr_all * low
 	upperLimits = a + stderr_all * high
 	var2 = []
 	for variablev, av, stderr, stderr_tValue, stderr_pValue, l, u in zip(variables, a, stderr_all, stderr_tValues, stderr_pValues, lowerLimits, upperLimits):
@@ -275,22 +288,27 @@ def showPRC(inputData):
 
 def showResiduals(inputData):
 	(name, residuals, model, data, vResiduals, seResiduals) = inputData
-	table5_index = ['Residuals', 'Absolute Residuals', 'Relative Residuals', 'Standard Residuals']
+	sortList = ['Residuals', 'Standard Residuals', 'Absolute Residuals', 'Relative Residuals']
+	table5_index = copy.copy(sortList)
+	sortList.append('Default')
 	table5_index.extend(name)
 	table5_index.append('Model')
 	absresiduals = np.abs(residuals)
 	reresiduals = residuals / model
+	stdresiduals = residuals / seResiduals
 	var5 = []
-	for residual, absresidual, reresidual, d, m in zip(residuals, absresiduals, reresiduals, data.T, model):
-		var5_list = [residual, absresidual, reresidual]
-		var5_list.append(residual / seResiduals)
+	for residual, stdresidual, absresidual, reresidual, d, m in zip(residuals, stdresiduals, absresiduals, reresiduals, data.T, model):
+		var5_list = [residual, stdresidual, absresidual, reresidual]
 		var5_list.extend(d)
 		var5_list.append(m)
 		var5.append(var5_list)
 	
+	df = pd.DataFrame(var5, columns=table5_index)
+	
 	FrameMax = sg.Frame( 'Max', 
 		[
 			[sg.Text('Residuals'), sg.InputText(f'{np.max(residuals)}', readonly=True)],
+			[sg.Text('Standard Residuals'), sg.InputText(f'{np.max(stdresiduals)}', readonly=True)],
 			[sg.Text('Absolute Residuals'), sg.InputText(f'{np.max(absresiduals)}', readonly=True)],
 			[sg.Text('Relative Residuals'), sg.InputText(f'{np.max(reresiduals)}', readonly=True)],
 		]
@@ -298,6 +316,7 @@ def showResiduals(inputData):
 	FrameMin = sg.Frame( 'Min', 
 		[
 			[sg.Text('Residuals'), sg.InputText(f'{np.min(residuals)}', readonly=True)],
+			[sg.Text('Standard Residuals'), sg.InputText(f'{np.min(stdresiduals)}', readonly=True)],
 			[sg.Text('Absolute Residuals'), sg.InputText(f'{np.min(absresiduals)}', readonly=True)],
 			[sg.Text('Relative Residuals'), sg.InputText(f'{np.min(reresiduals)}', readonly=True)],
 		]
@@ -305,9 +324,11 @@ def showResiduals(inputData):
 	residualsQ = np.quantile(a=residuals, q=np.array([0.25, 0.5, 0.75]))
 	absresidualsQ = np.quantile(a=absresiduals, q=np.array([0.25, 0.5, 0.75]))
 	reresidualsQ = np.quantile(a=reresiduals, q=np.array([0.25, 0.5, 0.75]))
+	stdresidualsQ = np.quantile(a=stdresiduals, q=np.array([0.25, 0.5, 0.75]))
 	FrameQ1 = sg.Frame( 'Q1', 
 		[
 			[sg.Text('Residuals'), sg.InputText(f'{residualsQ[0]}', readonly=True)],
+			[sg.Text('Standard Residuals'), sg.InputText(f'{stdresidualsQ[0]}', readonly=True)],
 			[sg.Text('Absolute Residuals'), sg.InputText(f'{absresidualsQ[0]}', readonly=True)],
 			[sg.Text('Relative Residuals'), sg.InputText(f'{reresidualsQ[0]}', readonly=True)],
 		]
@@ -315,6 +336,7 @@ def showResiduals(inputData):
 	FrameQ2 = sg.Frame( 'Q2', 
 		[
 			[sg.Text('Residuals'), sg.InputText(f'{residualsQ[1]}', readonly=True)],
+			[sg.Text('Standard Residuals'), sg.InputText(f'{stdresidualsQ[1]}', readonly=True)],
 			[sg.Text('Absolute Residuals'), sg.InputText(f'{absresidualsQ[1]}', readonly=True)],
 			[sg.Text('Relative Residuals'), sg.InputText(f'{reresidualsQ[1]}', readonly=True)],
 		]
@@ -322,6 +344,7 @@ def showResiduals(inputData):
 	FrameQ3 = sg.Frame( 'Q3', 
 		[
 			[sg.Text('Residuals'), sg.InputText(f'{residualsQ[2]}', readonly=True)],
+			[sg.Text('Standard Residuals'), sg.InputText(f'{stdresidualsQ[2]}', readonly=True)],
 			[sg.Text('Absolute Residuals'), sg.InputText(f'{absresidualsQ[2]}', readonly=True)],
 			[sg.Text('Relative Residuals'), sg.InputText(f'{reresidualsQ[2]}', readonly=True)],
 		]
@@ -333,7 +356,20 @@ def showResiduals(inputData):
 			[sg.Text('Standard error of residuals'), sg.InputText(f'{seResiduals}', readonly=True)],
 		]
 	)
-	return [[column5, sg.Table(var5, headings=table5_index)]]
+	fig = plt.Figure()
+	ax = fig.add_subplot(111)
+	ax.set_title('Standard Residuals')
+	labels = ['Standard Residuals']
+	ax.hist(stdresiduals, label=labels, bins=math.ceil(np.sqrt(len(stdresiduals))))
+	
+	columnT = sg.Column(
+		[
+			[sg.Canvas(key='CANVAS_R')],
+			[sg.Table(var5, headings=table5_index, key='Tablec5')],
+			[sg.Button('Asc', key='Ascc5'), sg.Button('Desc', key='Descc5'), sg.Combo(sortList, key='Comboc5', readonly=True, default_value='Default')]
+		]
+	)
+	return ([[column5, columnT]], fig, df)
 
 def showMulticollinearity(inputData):
 	(vif, m_mcc, name) = inputData
