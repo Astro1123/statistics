@@ -2,6 +2,7 @@ import PySimpleGUI as sg
 
 import math
 import copy
+from enum import Enum, auto
 
 from scipy import stats
 
@@ -17,12 +18,27 @@ import seaborn as sns
 
 from . import ReturnInfo as ri
 
+class CodeC1(Enum):
+	NONE = auto()
+	Sigma1 = auto()
+	Sigma2 = auto()
+	Sigma3 = auto()
+	I90 = auto()
+	I95 = auto()
+	I99 = auto()
+
 
 
 def plotResiduals(inputData):
 	(residuals, model, d) = inputData[0]
 	(count, variable, data, a, name, alpha) = d
 	sg.theme('Dark Brown')
+	
+	dicc1 = {
+		'None' : CodeC1.NONE,
+		'1σ' : CodeC1.Sigma1, '2σ' : CodeC1.Sigma2, '3σ' : CodeC1.Sigma3,
+		'90%' : CodeC1.I90, '95%' : CodeC1.I95, '99%' : CodeC1.I99
+	}
 
 	#Chi-square
 	ydata = data[-1]
@@ -87,7 +103,7 @@ def plotResiduals(inputData):
 	stderr_coef = SE[:-1]
 	stderr_cnst = SE[-1][0,0]
 	
-	inputData = (chi2, rss, mse, rmse, mae, aic, vResiduals, seResiduals, r_squared, adj_r_squared, mcc, model, residuals)
+	inputData = (chi2, rss, mse, rmse, mae, aic, vResiduals, seResiduals, r_squared, adj_r_squared, mcc, model, residuals, dicc1)
 	(widget, fig1) = showScatterPlot(inputData)
 	t1 = sg.Tab('Scatter plot' ,widget)
 	inputData = (name, stderr_coef, stderr_cnst, a, freedom, model, residuals, variable)
@@ -133,6 +149,23 @@ def plotResiduals(inputData):
 		elif event == 'Exit':
 			res = ri.QuitCmd()
 			break
+		elif event == 'Sctc1':
+			if dicc1[values['Comboc1']] == CodeC1.NONE:
+				additional = (0, None)
+			elif dicc1[values['Comboc1']] == CodeC1.Sigma1:
+				additional = (1, seResiduals)
+			elif dicc1[values['Comboc1']] == CodeC1.Sigma2:
+				additional = (2, seResiduals)
+			elif dicc1[values['Comboc1']] == CodeC1.Sigma3:
+				additional = (3, seResiduals)
+			elif dicc1[values['Comboc1']] == CodeC1.I90:
+				additional = (4, (stats.t.interval(alpha=0.9, df=freedom), seResiduals))
+			elif dicc1[values['Comboc1']] == CodeC1.I95:
+				additional = (5, (stats.t.interval(alpha=0.95, df=freedom), seResiduals))
+			elif dicc1[values['Comboc1']] == CodeC1.I99:
+				additional = (6, (stats.t.interval(alpha=0.99, df=freedom), seResiduals))
+			pltScatterPlotc1(fig1, model, residuals, additional)
+			fig_agg1.draw()
 		elif event == 'Ascc5':
 			if values['Comboc5'] == 'Default':
 				window['Tablec5'].update(values=df5.values.tolist())
@@ -143,10 +176,63 @@ def plotResiduals(inputData):
 				window['Tablec5'].update(values=df5.values.tolist())
 			else:
 				window['Tablec5'].update(values=df5.sort_values(values['Comboc5'], ascending=False).values.tolist())
+		elif event == 'Updatec2':
+			if values['Comboc2'] == '90%':
+				pc = 90
+			elif values['Comboc2'] == '99%':
+				pc = 99
+			else:
+				pc = 95
+			inputData = (name, stderr_coef, stderr_cnst, a, freedom, pc)
+			window['Tablec2a'].update(values=updateTableC2(inputData))
 
 	window.close()
 	return res
 
+def pltScatterPlotc1(fig1, model, residuals, additional):
+	(code, data) = additional
+	x_latent = np.linspace(min(model), max(model), 100)
+	ideal = np.linspace(0, 0, 100)
+	
+	ax1 = fig1.add_subplot(111)
+	ax1.scatter(model, residuals)
+	ax1.set_title(f"Residual plot")
+	ax1.set_xlabel("Fitted values")
+	ax1.set_ylabel("Residual")
+	ax1.plot(x_latent, ideal, c="red")
+	ax1.grid(True)
+	if code == 4 or code == 5 or code == 6:
+		(data, sigma) = data
+		(lower, upper) = data
+		y1 = np.linspace(sigma * upper, sigma * upper, 100)
+		y2 = np.linspace(sigma * lower, sigma * lower, 100)
+		ax1.plot(x_latent, y1, c="green")
+		ax1.plot(x_latent, y2, c="green")
+	elif code == 1 or code == 2 or code == 3:
+		y1 = np.linspace(data * code, data * code, 100)
+		y2 = np.linspace(-data * code, -data * code, 100)
+		ax1.plot(x_latent, y1, c="green")
+		ax1.plot(x_latent, y2, c="green")
+	return fig1
+
+def updateTableC2(inputData):
+	(name, stderr_coef, stderr_cnst, a, freedom, pc) = inputData
+	table2_index = ['Variables', 'Coefficient', 'Standard error', 't-value', 'p-value', f'Lower limit ({pc}%)', f'Upper limit ({pc}%)']
+	variables = name[:-1]
+	variables.append('Constant')
+	stderr_all = copy.copy(stderr_coef)
+	stderr_all.append(stderr_cnst)
+	stderr_all = np.array(stderr_all)
+	stderr_tValues = a / stderr_all
+	stderr_pValues = stats.t.sf(x=np.abs(stderr_tValues), df=freedom) * 2
+	(low, high) = stats.t.interval(alpha=pc/100, df=freedom)
+	lowerLimits = a + stderr_all * low
+	upperLimits = a + stderr_all * high
+	var2 = []
+	for variablev, av, stderr, stderr_tValue, stderr_pValue, l, u in zip(variables, a, stderr_all, stderr_tValues, stderr_pValues, lowerLimits, upperLimits):
+		var2_list = [variablev, av, stderr, stderr_tValue, stderr_pValue, l, u]
+		var2.append(var2_list)
+	return var2
 
 
 
@@ -167,7 +253,7 @@ def showStatistics(inputData):
 	return [[column0a, column0b]]
 
 def showScatterPlot(inputData):
-	(chi2, rss, mse, rmse, mae, aic, vResiduals, seResiduals, r_squared, adj_r_squared, mcc, model, residuals) = inputData
+	(chi2, rss, mse, rmse, mae, aic, vResiduals, seResiduals, r_squared, adj_r_squared, mcc, model, residuals, dic) = inputData
 	#https://rikei-logistics.com/excel-regression
 	column1 = sg.Column(
 		[
@@ -185,27 +271,26 @@ def showScatterPlot(inputData):
 			[sg.Text('Multiple correlation coefficient'), sg.InputText(f'{mcc}', readonly=True)],
 		]
 	)
-
-	x_latent = np.linspace(min(model), max(model), 100)
-	ideal = np.linspace(0, 0, 100)
 	
-	fig1 = plt.Figure()
-	ax1 = fig1.add_subplot(111)
-	ax1.scatter(model, residuals)
-	ax1.set_title(f"Residual plot")
-	ax1.set_xlabel("Fitted values")
-	ax1.set_ylabel("Residual")
-	ax1.plot(x_latent, ideal, c="red")
-	ax1.grid(True)
+	modeList = list(dic.keys())
+	columnG = sg.Column(
+		[
+			[sg.Canvas(key='CANVAS_S', size=(640, 480))],
+			[sg.Button('Draw', key='Sctc1'), sg.Combo(modeList, key='Comboc1', readonly=True, default_value='None')]
+		]
+	)
 	
-	return ([[column1, sg.Canvas(key='CANVAS_S', size=(640, 480))]], fig1)
+	fig = plt.Figure()
+	pltScatterPlotc1(fig, model, residuals, (CodeC1.NONE, None))
+	
+	return ([[column1, columnG]], fig)
 
 def showStatisticalSignificance(inputData):
 	(name, stderr_coef, stderr_cnst, a, freedom, model, residuals, variable) = inputData
 	table2_index = ['Variables', 'Coefficient', 'Standard error', 't-value', 'p-value', 'Lower limit (95%)', 'Upper limit (95%)']
 	variables = name[:-1]
 	variables.append('Constant')
-	stderr_all_tmp = stderr_coef
+	stderr_all_tmp = copy.copy(stderr_coef)
 	stderr_all_tmp.append(stderr_cnst)
 	stderr_all = np.array(stderr_all_tmp)
 	stderr_tValues = a / stderr_all
@@ -235,10 +320,12 @@ def showStatisticalSignificance(inputData):
 			[]
 		]
 	)
+	parcent = ['90%', '95%', '99%']
 	columnG = sg.Column(
 		[
-			[sg.Table(var2, headings=table2_index)],
+			[sg.Table(var2, headings=table2_index, key='Tablec2a')],
 			[sg.Table(var, headings=table_index)],
+			[sg.Button('Update', key='Updatec2'), sg.Combo(parcent, key='Comboc2', readonly=True, default_value='95%')]
 		]
 	)
 	return [[column2, columnG]]
