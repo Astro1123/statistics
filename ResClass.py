@@ -4,6 +4,7 @@ import Main
 import Basic
 import CommandClass
 import processing
+import conv
 
 class Status(Enum):
 	NULL = 0
@@ -29,6 +30,19 @@ def basic(res):
 	elif res == Basic.Basic.Status.NEXT:
 		return Status.BACK
 	elif res == Basic.Basic.Status.QUIT:
+		return Status.QUIT
+	return Status.NULL
+
+def Conv(res):
+	if res == conv.Conv.Status.SUCCESS:
+		return Status.SUCCESS
+	elif res == conv.Conv.Status.ERROR:
+		return Status.ERROR
+	elif res == conv.Conv.Status.BACK:
+		return Status.BACK
+	elif res == conv.Conv.Status.NEXT:
+		return Status.BACK
+	elif res == conv.Conv.Status.QUIT:
 		return Status.QUIT
 	return Status.NULL
 

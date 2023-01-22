@@ -2,6 +2,7 @@ import PySimpleGUI as sg
 from enum import Enum, auto
 from Fit.FitData import FitData
 from Basic.Basic import Basic
+from conv.Conv import Conv
 from processing.processing import mergeFiles, addNewData
 import ResClass
 import os
@@ -16,6 +17,7 @@ class Status(Enum):
 	GET_DATA = auto()
 	BASIC = auto()
 	ADD = auto()
+	CONV = auto()
 	CONCAT = auto()
 	FIT_2D = auto()
 	FIT_3D = auto()
@@ -30,7 +32,8 @@ def main(default):
 		Status.BASIC: 'Calculate Basic Statistics',
 		Status.FIT_2D: 'Do Curve Fitting and Show 2D Graph',
 		Status.FIT_3D: 'Do Curve Fitting and Show 3D Graph',
-		Status.FIT_MD: 'Do Curve Fitting (Multi-dimension)'
+		Status.FIT_MD: 'Do Curve Fitting (Multi-dimension)',
+		Status.CONV: 'Show Correlation Coefficient'
 		#Status.CMP: 'Compare Basic Statistics in 2 Files'
 	}
 	
@@ -50,6 +53,8 @@ def main(default):
 		return (ResClass.readFit2d(FitData(3)), dic[res])
 	elif res == Status.FIT_MD:
 		return (ResClass.readFit2d(FitData(0)), dic[res])
+	elif res == Status.CONV:
+		return (ResClass.Conv(Conv()), dic[res])
 	else:
 		return (ResClass.readMain(res), 'Select')
 
