@@ -63,7 +63,7 @@ def ErrorCmd(data):
 	return res
 	
 	
-def Conv():
+def Coef():
 	filename = None
 	select = []
 	while True:

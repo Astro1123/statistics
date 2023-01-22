@@ -2,7 +2,7 @@ import PySimpleGUI as sg
 from enum import Enum, auto
 from Fit.FitData import FitData
 from Basic.Basic import Basic
-from conv.Conv import Conv
+from coef.Coef import Coef
 from processing.processing import mergeFiles, addNewData
 import ResClass
 import os
@@ -54,7 +54,7 @@ def main(default):
 	elif res == Status.FIT_MD:
 		return (ResClass.readFit2d(FitData(0)), dic[res])
 	elif res == Status.CONV:
-		return (ResClass.Conv(Conv()), dic[res])
+		return (ResClass.Coef(Coef()), dic[res])
 	else:
 		return (ResClass.readMain(res), 'Select')
 
